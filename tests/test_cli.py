@@ -10,7 +10,9 @@ def test_cli_version():
     runner = CliRunner()
     result = runner.invoke(cli, ["--version"])
     assert result.exit_code == 0
-    assert "idp-cli" in result.output
+    assert "IDP CLI" in result.output
+    assert "CLI Version" in result.output
+    assert "0.2.0" in result.output
 
 
 def test_cli_help():
