@@ -8,6 +8,13 @@ from idp_cli.templates.python_api import PythonAPITemplate
 from idp_cli.templates.node_api import NodeAPITemplate
 from idp_cli.templates.worker import WorkerTemplate
 from idp_cli.templates.ml_inference import MLInferenceTemplate
+from idp_cli.templates.go_api import GoAPITemplate
+from idp_cli.templates.python_graphql import GraphQLTemplate
+from idp_cli.templates.react_frontend import ReactFrontendTemplate
+from idp_cli.templates.nextjs_fullstack import NextJSFullStackTemplate
+from idp_cli.templates.python_cli import PythonCLITemplate
+from idp_cli.templates.rust_api import RustAPITemplate
+from idp_cli.templates.static_site import StaticSiteTemplate
 from idp_cli.config.settings import AVAILABLE_TEMPLATES
 
 
@@ -17,6 +24,13 @@ _TEMPLATE_CLASSES = {
     "node-api": NodeAPITemplate,
     "worker": WorkerTemplate,
     "ml-inference": MLInferenceTemplate,
+    "go-api": GoAPITemplate,
+    "python-graphql": GraphQLTemplate,
+    "react-frontend": ReactFrontendTemplate,
+    "nextjs-fullstack": NextJSFullStackTemplate,
+    "python-cli": PythonCLITemplate,
+    "rust-api": RustAPITemplate,
+    "static-site": StaticSiteTemplate,
 }
 
 

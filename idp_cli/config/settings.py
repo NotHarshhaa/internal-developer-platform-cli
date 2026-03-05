@@ -40,6 +40,48 @@ AVAILABLE_TEMPLATES = {
         "language": "python",
         "framework": "fastapi",
     },
+    "go-api": {
+        "name": "Go API",
+        "description": "Production-ready Go API service using Gin framework",
+        "language": "go",
+        "framework": "gin",
+    },
+    "python-graphql": {
+        "name": "Python GraphQL API",
+        "description": "Python GraphQL API service using Strawberry and FastAPI",
+        "language": "python",
+        "framework": "strawberry",
+    },
+    "react-frontend": {
+        "name": "React Frontend",
+        "description": "React frontend application with TypeScript and Vite",
+        "language": "typescript",
+        "framework": "react",
+    },
+    "nextjs-fullstack": {
+        "name": "Next.js Full-stack",
+        "description": "Full-stack application using Next.js with TypeScript",
+        "language": "typescript",
+        "framework": "nextjs",
+    },
+    "python-cli": {
+        "name": "Python CLI Tool",
+        "description": "Python command-line tool using Click framework",
+        "language": "python",
+        "framework": "click",
+    },
+    "rust-api": {
+        "name": "Rust API",
+        "description": "Production-ready Rust API service using Axum framework",
+        "language": "rust",
+        "framework": "axum",
+    },
+    "static-site": {
+        "name": "Static Site",
+        "description": "Static site generator using HTML, CSS, and JavaScript",
+        "language": "javascript",
+        "framework": "vanilla",
+    },
 }
 
 # CI/CD providers

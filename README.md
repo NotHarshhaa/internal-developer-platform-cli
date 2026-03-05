@@ -49,14 +49,31 @@ This automatically generates:
 
 Generate production-ready microservices using prebuilt templates.
 
-Supported templates:
+#### 🌐 Backend APIs
 
 | Template | Description | Language | Framework |
 |---|---|---|---|
 | `python-api` | Production-ready Python API service | Python | FastAPI |
 | `node-api` | Production-ready Node.js API service | JavaScript | Express |
-| `worker` | Background worker/job processing service | Python | Celery |
+| `go-api` | Production-ready Go API service | Go | Gin |
+| `rust-api` | High-performance Rust API service | Rust | Axum |
+| `python-graphql` | GraphQL API with Strawberry and FastAPI | Python | Strawberry |
 | `ml-inference` | Machine learning model inference API | Python | FastAPI |
+
+#### 🎨 Frontend Applications
+
+| Template | Description | Language | Framework |
+|---|---|---|---|
+| `react-frontend` | React frontend with TypeScript and Vite | TypeScript | React |
+| `nextjs-fullstack` | Full-stack application with Next.js | TypeScript | Next.js |
+| `static-site` | Modern static site with HTML, CSS, JS | JavaScript | Vanilla |
+
+#### 🛠️ Developer Tools
+
+| Template | Description | Language | Framework |
+|---|---|---|---|
+| `python-cli` | Command-line tool with Click and Rich | Python | Click |
+| `worker` | Background worker/job processing service | Python | Celery |
 
 ### ⚙️ CI/CD Automation
 
@@ -123,6 +140,26 @@ Auto-generated documentation:
 - `docs/deployment.md` — Deployment guide for all environments
 - `docs/architecture.md` — Architecture overview and design principles
 
+### 🎯 Template Coverage
+
+The IDP CLI supports **11 production-ready templates** covering the entire modern development stack:
+
+| Category | Templates | Use Cases |
+|---|---|---|
+| **Backend APIs** (6) | `python-api`, `node-api`, `go-api`, `rust-api`, `python-graphql`, `ml-inference` | Microservices, APIs, GraphQL, ML services |
+| **Frontend Apps** (3) | `react-frontend`, `nextjs-fullstack`, `static-site` | SPAs, full-stack apps, marketing sites |
+| **Developer Tools** (2) | `python-cli`, `worker` | CLI tools, background jobs, task processing |
+
+Each template includes:
+- ✅ Production-ready code with best practices
+- ✅ Comprehensive testing setup
+- ✅ Docker configuration (multi-stage, secure)
+- ✅ Kubernetes manifests with HPA
+- ✅ CI/CD pipelines (GitHub/GitLab/Jenkins)
+- ✅ Monitoring and observability
+- ✅ Environment-specific configs
+- ✅ Complete documentation
+
 ---
 
 ## 📦 Installation
@@ -146,18 +183,35 @@ pip install -e .
 ### Create a Service
 
 ```bash
+# Python API service
 idp-cli create-service payment-service --template python-api
+
+# Go API service
+idp-cli create-service user-service --template go-api
+
+# React frontend
+idp-cli create-service web-app --template react-frontend
+
+# Rust API service
+idp-cli create-service auth-service --template rust-api
 ```
 
 ### Create Service with Full Options
 
 ```bash
-idp-cli create-service payment-service \
-  --template node-api \
+# Full-stack Next.js application with complete CI/CD
+idp-cli create-service my-app \
+  --template nextjs-fullstack \
   --ci github-actions \
   --deploy kubernetes \
   --gitops argocd \
   --output-dir ./services
+
+# High-performance Go API with GitLab CI
+idp-cli create-service api-gateway \
+  --template go-api \
+  --ci gitlab-ci \
+  --deploy kubernetes
 ```
 
 ### List Available Templates
@@ -182,52 +236,6 @@ idp-cli create-service my-service \
 ```bash
 idp-cli --help
 idp-cli create-service --help
-```
-
----
-
-## 🏗️ Project Structure
-
-```
-idp-cli/
-├── idp_cli/
-│   ├── cli.py                    # Main CLI entry point
-│   ├── commands/
-│   │   ├── create_service.py     # create-service command
-│   │   └── list_templates.py     # list-templates command
-│   ├── templates/
-│   │   ├── base.py               # Base template class
-│   │   ├── registry.py           # Template registry
-│   │   ├── python_api.py         # Python API template
-│   │   ├── node_api.py           # Node.js API template
-│   │   ├── worker.py             # Worker service template
-│   │   └── ml_inference.py       # ML inference template
-│   ├── integrations/
-│   │   ├── docker.py             # Dockerfile generator
-│   │   ├── kubernetes.py         # K8s manifest generator
-│   │   ├── github/
-│   │   │   ├── actions.py        # GitHub Actions generator
-│   │   │   ├── gitlab_ci.py      # GitLab CI generator
-│   │   │   └── jenkins.py        # Jenkins pipeline generator
-│   │   ├── gitops/
-│   │   │   ├── argocd.py         # ArgoCD config generator
-│   │   │   └── flux.py           # Flux CD config generator
-│   │   ├── monitoring/
-│   │   │   └── prometheus.py     # Prometheus & Grafana generator
-│   │   └── docs.py               # Documentation generator
-│   ├── config/
-│   │   └── settings.py           # Default settings & constants
-│   └── utils/
-│       ├── file_utils.py         # File operations
-│       └── console.py            # Console output formatting
-├── tests/
-│   ├── test_cli.py
-│   ├── test_create_service.py
-│   ├── test_templates.py
-│   └── test_utils.py
-├── pyproject.toml
-├── requirements.txt
-└── README.md
 ```
 
 ---
