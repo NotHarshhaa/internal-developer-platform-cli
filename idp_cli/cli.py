@@ -5,22 +5,30 @@ import click
 from idp_cli import __version__
 from idp_cli.commands.create_service import create_service
 from idp_cli.commands.list_templates import list_templates
+from idp_cli.utils.console import print_banner
 
 
-@click.group()
+class IDPGroup(click.Group):
+    """Custom Click group that displays the banner before help."""
+
+    def format_help(self, ctx, formatter):
+        print_banner(__version__)
+        super().format_help(ctx, formatter)
+
+
+@click.group(cls=IDPGroup)
 @click.version_option(version=__version__, prog_name="idp-cli")
 def cli():
-    """Internal Developer Platform CLI — Self-service infrastructure for developers.
+    """Self-service infrastructure for developers.
 
+    \b
     Create production-ready services with CI/CD, Docker, Kubernetes,
-    monitoring, and documentation in seconds.
+    monitoring, and documentation — all in seconds.
 
+    \b
     Examples:
-
       idp-cli create-service payment-service --template python-api
-
-      idp-cli create-service user-service --template node-api --ci github-actions --deploy kubernetes
-
+      idp-cli create-service user-service --template node-api --ci github-actions
       idp-cli list-templates
     """
     pass

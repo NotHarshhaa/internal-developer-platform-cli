@@ -18,7 +18,7 @@ def test_cli_help():
     runner = CliRunner()
     result = runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
-    assert "Internal Developer Platform CLI" in result.output
+    assert "Self-service infrastructure" in result.output
 
 
 def test_create_service_help():

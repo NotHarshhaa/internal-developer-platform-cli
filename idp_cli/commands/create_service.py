@@ -1,9 +1,12 @@
 """Create service command - the main scaffolding command."""
 
+import time
 from pathlib import Path
 
 import click
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 
+from idp_cli import __version__
 from idp_cli.config.settings import (
     AVAILABLE_TEMPLATES,
     CI_PROVIDERS,
@@ -22,11 +25,13 @@ from idp_cli.integrations.monitoring.prometheus import generate_monitoring_confi
 from idp_cli.integrations.docs import generate_documentation
 from idp_cli.utils.file_utils import validate_service_name
 from idp_cli.utils.console import (
+    console,
+    print_banner,
     print_success,
     print_error,
-    print_header,
     print_step,
-    print_info,
+    print_config_panel,
+    print_next_steps,
 )
 
 
@@ -126,76 +131,139 @@ def create_service(
         print_error(f"Directory '{service_path}' already exists. Aborting.")
         raise SystemExit(1)
 
-    print_header(f"Creating Service: {service_name}")
-    print_info(f"Template: {template_name}")
-    print_info(f"CI/CD: {ci}")
-    print_info(f"Deploy: {deploy}")
-    print_info(f"Output: {output_path}")
-    click.echo()
+    # Show banner and config
+    print_banner(__version__)
+
+    print_config_panel("Service Configuration", {
+        "Service Name": service_name,
+        "Template": f"{template_name} ({AVAILABLE_TEMPLATES[template_name]['name']})",
+        "CI/CD": f"{ci} ({CI_PROVIDERS[ci]['name']})",
+        "Deploy": f"{deploy} ({DEPLOY_TARGETS[deploy]['name']})",
+        "GitOps": gitops,
+        "Output": str(output_path),
+    })
+    console.print()
+
+    # Build the list of steps
+    steps = []
+    steps.append(("Service Scaffold", lambda: _step_scaffold(template_name, service_name, output_path)))
+    steps.append(("Docker Configuration", lambda: _step_docker(no_docker, service_path, service_name, template_name)))
+    steps.append(("CI/CD Pipeline", lambda: _step_ci(ci, service_path, service_name, template_name)))
+    steps.append(("Kubernetes Manifests", lambda: _step_k8s(no_k8s, service_path, service_name)))
+    steps.append(("GitOps Configuration", lambda: _step_gitops(gitops, service_path, service_name)))
+    steps.append(("Monitoring & Observability", lambda: _step_monitoring(no_monitoring, service_path, service_name)))
+    steps.append(("Documentation", lambda: _step_docs(no_docs, service_path, service_name, template_name, ci)))
+
+    template = None
 
     try:
-        # 1. Generate service from template
-        print_step("Step 1/7: Generating service scaffold...")
-        template = get_template(template_name, service_name, output_path)
-        template.generate()
+        with Progress(
+            SpinnerColumn(style="cyan"),
+            TextColumn("[bold white]{task.description}"),
+            BarColumn(bar_width=30, style="dim", complete_style="cyan", finished_style="green"),
+            TaskProgressColumn(),
+            console=console,
+        ) as progress:
+            overall = progress.add_task("[bold cyan]Creating service...", total=len(steps))
 
-        # 2. Generate Docker configuration
-        if not no_docker:
-            print_step("Step 2/7: Generating Docker configuration...")
-            generate_docker_config(service_path, service_name, template.language)
-        else:
-            print_step("Step 2/7: Skipping Docker configuration")
+            for step_name, step_fn in steps:
+                progress.update(overall, description=f"[bold cyan]{step_name}...")
+                result = step_fn()
+                if result is not None:
+                    template = result
+                progress.advance(overall)
 
-        # 3. Generate CI/CD pipeline
-        print_step("Step 3/7: Generating CI/CD pipeline...")
-        _generate_ci_pipeline(ci, service_path, service_name, template.language)
+        console.print()
 
-        # 4. Generate Kubernetes manifests
-        if not no_k8s:
-            print_step("Step 4/7: Generating Kubernetes manifests...")
-            generate_k8s_manifests(service_path, service_name)
-        else:
-            print_step("Step 4/7: Skipping Kubernetes manifests")
+        # Success summary
+        from rich.panel import Panel
+        from rich import box
 
-        # 5. Generate GitOps configuration
-        if gitops != "none":
-            print_step(f"Step 5/7: Generating GitOps configuration ({gitops})...")
-            _generate_gitops(gitops, service_path, service_name)
-        else:
-            print_step("Step 5/7: Skipping GitOps configuration")
+        # Get language from template
+        lang = AVAILABLE_TEMPLATES[template_name]["language"]
 
-        # 6. Generate monitoring configuration
-        if not no_monitoring:
-            print_step("Step 6/7: Generating monitoring configuration...")
-            generate_monitoring_config(service_path, service_name)
-        else:
-            print_step("Step 6/7: Skipping monitoring configuration")
+        summary_lines = [
+            f"  [bold green]✓[/bold green] Service [bold cyan]{service_name}[/bold cyan] created successfully!",
+            f"  [bold green]✓[/bold green] Location: [dim]{service_path}[/dim]",
+            "",
+            f"  [dim]Template:[/dim]    {template_name}",
+            f"  [dim]CI/CD:[/dim]       {ci}",
+            f"  [dim]Docker:[/dim]      {'✓' if not no_docker else '✗ skipped'}",
+            f"  [dim]Kubernetes:[/dim]  {'✓' if not no_k8s else '✗ skipped'}",
+            f"  [dim]GitOps:[/dim]      {gitops if gitops != 'none' else '✗ skipped'}",
+            f"  [dim]Monitoring:[/dim]  {'✓' if not no_monitoring else '✗ skipped'}",
+            f"  [dim]Docs:[/dim]        {'✓' if not no_docs else '✗ skipped'}",
+        ]
 
-        # 7. Generate documentation
-        if not no_docs:
-            print_step("Step 7/7: Generating documentation...")
-            generate_documentation(
-                service_path, service_name, template_name, template.language, ci
-            )
-        else:
-            print_step("Step 7/7: Skipping documentation")
+        console.print(Panel(
+            "\n".join(summary_lines),
+            title="[bold green]Service Created[/bold green]",
+            border_style="green",
+            box=box.DOUBLE,
+            padding=(1, 2),
+        ))
 
-        click.echo()
-        print_success(f"Service '{service_name}' created successfully!")
-        print_info(f"Location: {service_path}")
-        click.echo()
-        click.echo("Next steps:")
-        click.echo(f"  cd {service_name}")
-        if template.language == "python":
-            click.echo("  pip install -r requirements.txt")
-            click.echo("  uvicorn app.main:app --reload")
-        elif template.language == "javascript":
-            click.echo("  npm install")
-            click.echo("  npm run dev")
+        # Next steps
+        next_steps = [f"[bold]cd[/bold] {service_name}"]
+        if lang == "python":
+            next_steps.append("[bold]pip install[/bold] -r requirements.txt")
+            next_steps.append("[bold]uvicorn[/bold] app.main:app --reload")
+        elif lang == "javascript":
+            next_steps.append("[bold]npm install[/bold]")
+            next_steps.append("[bold]npm run[/bold] dev")
+        next_steps.append("[bold]docker build[/bold] -t {name}:latest .".format(name=service_name))
+
+        print_next_steps(next_steps)
+        console.print()
 
     except Exception as e:
         print_error(f"Failed to create service: {e}")
         raise SystemExit(1)
+
+
+def _step_scaffold(template_name, service_name, output_path):
+    """Generate service scaffold from template."""
+    template = get_template(template_name, service_name, output_path)
+    template.generate()
+    return template
+
+
+def _step_docker(no_docker, service_path, service_name, template_name):
+    """Generate Docker configuration."""
+    if not no_docker:
+        lang = AVAILABLE_TEMPLATES[template_name]["language"]
+        generate_docker_config(service_path, service_name, lang)
+
+
+def _step_ci(ci, service_path, service_name, template_name):
+    """Generate CI/CD pipeline."""
+    lang = AVAILABLE_TEMPLATES[template_name]["language"]
+    _generate_ci_pipeline(ci, service_path, service_name, lang)
+
+
+def _step_k8s(no_k8s, service_path, service_name):
+    """Generate Kubernetes manifests."""
+    if not no_k8s:
+        generate_k8s_manifests(service_path, service_name)
+
+
+def _step_gitops(gitops, service_path, service_name):
+    """Generate GitOps configuration."""
+    if gitops != "none":
+        _generate_gitops(gitops, service_path, service_name)
+
+
+def _step_monitoring(no_monitoring, service_path, service_name):
+    """Generate monitoring configuration."""
+    if not no_monitoring:
+        generate_monitoring_config(service_path, service_name)
+
+
+def _step_docs(no_docs, service_path, service_name, template_name, ci):
+    """Generate documentation."""
+    if not no_docs:
+        lang = AVAILABLE_TEMPLATES[template_name]["language"]
+        generate_documentation(service_path, service_name, template_name, lang, ci)
 
 
 def _generate_ci_pipeline(ci: str, service_dir: Path, service_name: str, language: str) -> None:

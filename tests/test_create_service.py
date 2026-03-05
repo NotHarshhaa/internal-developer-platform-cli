@@ -9,6 +9,11 @@ from click.testing import CliRunner
 from idp_cli.cli import cli
 
 
+def _normalize(text: str) -> str:
+    """Normalize output by collapsing whitespace for assertion checks."""
+    return " ".join(text.split())
+
+
 class TestCreateService:
     """Test suite for the create-service command."""
 
@@ -33,7 +38,7 @@ class TestCreateService:
             ],
         )
         assert result.exit_code == 0
-        assert "created successfully" in result.output
+        assert "created successfully" in _normalize(result.output)
 
         service_dir = os.path.join(self.test_dir, "test-service")
         assert os.path.isdir(service_dir)
@@ -57,7 +62,7 @@ class TestCreateService:
             ],
         )
         assert result.exit_code == 0
-        assert "created successfully" in result.output
+        assert "created successfully" in _normalize(result.output)
 
         service_dir = os.path.join(self.test_dir, "node-test-svc")
         assert os.path.isdir(service_dir)
@@ -78,7 +83,7 @@ class TestCreateService:
             ],
         )
         assert result.exit_code == 0
-        assert "created successfully" in result.output
+        assert "created successfully" in _normalize(result.output)
 
         service_dir = os.path.join(self.test_dir, "bg-worker")
         assert os.path.isfile(os.path.join(service_dir, "app", "worker.py"))
@@ -96,7 +101,7 @@ class TestCreateService:
             ],
         )
         assert result.exit_code == 0
-        assert "created successfully" in result.output
+        assert "created successfully" in _normalize(result.output)
 
         service_dir = os.path.join(self.test_dir, "ml-svc")
         assert os.path.isfile(os.path.join(service_dir, "app", "ml", "model_manager.py"))
@@ -115,6 +120,7 @@ class TestCreateService:
             ],
         )
         assert result.exit_code == 0
+        assert "created successfully" in _normalize(result.output)
         service_dir = os.path.join(self.test_dir, "gitlab-svc")
         assert os.path.isfile(os.path.join(service_dir, ".gitlab-ci.yml"))
 
@@ -132,6 +138,7 @@ class TestCreateService:
             ],
         )
         assert result.exit_code == 0
+        assert "created successfully" in _normalize(result.output)
         service_dir = os.path.join(self.test_dir, "jenkins-svc")
         assert os.path.isfile(os.path.join(service_dir, "Jenkinsfile"))
 
@@ -149,6 +156,7 @@ class TestCreateService:
             ],
         )
         assert result.exit_code == 0
+        assert "created successfully" in _normalize(result.output)
         service_dir = os.path.join(self.test_dir, "argo-svc")
         assert os.path.isdir(os.path.join(service_dir, "gitops", "argocd"))
 
@@ -166,6 +174,7 @@ class TestCreateService:
             ],
         )
         assert result.exit_code == 0
+        assert "created successfully" in _normalize(result.output)
         service_dir = os.path.join(self.test_dir, "flux-svc")
         assert os.path.isdir(os.path.join(service_dir, "gitops", "flux"))
 
@@ -215,7 +224,7 @@ class TestCreateService:
             ],
         )
         assert result.exit_code != 0
-        assert "Invalid service name" in result.output
+        assert "Invalid service name" in _normalize(result.output)
 
     def test_duplicate_service_name(self):
         """Test that creating a service in an existing directory fails."""
@@ -241,4 +250,4 @@ class TestCreateService:
             ],
         )
         assert result.exit_code != 0
-        assert "already exists" in result.output
+        assert "already exists" in _normalize(result.output)
