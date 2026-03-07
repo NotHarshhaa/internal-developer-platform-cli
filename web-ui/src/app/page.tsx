@@ -9,6 +9,11 @@ import {
   BarChart3,
   Zap,
   Rocket,
+  Palette,
+  Smartphone,
+  Target,
+  Settings,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -272,19 +277,21 @@ export default function Home() {
           </div>
 
           {/* UI Features Grid */}
-          <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-16 grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { icon: "🎨", label: "Beautiful UI", desc: "Modern, clean interface" },
-              { icon: "⚡", label: "Fast Loading", desc: "Optimized performance" },
-              { icon: "🌙", label: "Dark Mode", desc: "Easy on the eyes" },
-              { icon: "📱", label: "Responsive", desc: "Works everywhere" },
-              { icon: "🎯", label: "Intuitive", desc: "User-friendly design" },
-              { icon: "🔧", label: "Customizable", desc: "Flexible configuration" },
-              { icon: "📊", label: "Live Preview", desc: "See changes instantly" },
-              { icon: "🚀", label: "Production Ready", desc: "Built for scale" },
+              { icon: Palette, label: "Beautiful UI", desc: "Modern, clean interface" },
+              { icon: Zap, label: "Fast Loading", desc: "Optimized performance" },
+              { icon: Terminal, label: "Dark Mode", desc: "Easy on the eyes" },
+              { icon: Smartphone, label: "Responsive", desc: "Works everywhere" },
+              { icon: Target, label: "Intuitive", desc: "User-friendly design" },
+              { icon: Settings, label: "Customizable", desc: "Flexible configuration" },
+              { icon: Eye, label: "Live Preview", desc: "See changes instantly" },
+              { icon: Rocket, label: "Production Ready", desc: "Built for scale" },
             ].map((feature) => (
               <div key={feature.label} className="text-center">
-                <div className="text-3xl mb-2">{feature.icon}</div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary mx-auto mb-3">
+                  <feature.icon className="h-6 w-6" />
+                </div>
                 <h4 className="font-semibold text-sm mb-1">{feature.label}</h4>
                 <p className="text-xs text-muted-foreground">{feature.desc}</p>
               </div>
