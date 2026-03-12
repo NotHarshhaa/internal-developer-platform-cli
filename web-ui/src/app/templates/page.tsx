@@ -162,7 +162,7 @@ function TemplateCard({ template }: { template: Template }) {
       <Card className="group h-full cursor-pointer transition-all duration-200 hover:shadow-xl hover:border-primary/30 hover:-translate-y-1">
         <CardHeader>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-3xl">{template.icon}</span>
+            <div className="text-3xl">{typeof template.icon === 'function' ? template.icon({ className: "w-8 h-8" }) : template.icon}</div>
             <div className="flex gap-1.5">
               <Badge variant="secondary" className="text-[10px]">
                 {template.language}
