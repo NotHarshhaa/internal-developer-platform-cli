@@ -9,6 +9,9 @@ from rich import box
 from idp_cli import __version__
 from idp_cli.commands.create_service import create_service
 from idp_cli.commands.list_templates import list_templates
+from idp_cli.commands.health_check import health_check
+from idp_cli.commands.dependency_viz import dependency_viz
+from idp_cli.commands.environment_status import environment_status
 from idp_cli.utils.console import console
 
 
@@ -91,6 +94,9 @@ def cli():
       idp-cli create-service payment-service --template python-api
       idp-cli create-service user-service --template node-api --ci github-actions
       idp-cli list-templates
+      idp-cli health --environment dev
+      idp-cli deps --format tree
+      idp-cli env-status --environment staging
     """
     pass
 
@@ -98,6 +104,9 @@ def cli():
 # Register commands
 cli.add_command(create_service)
 cli.add_command(list_templates)
+cli.add_command(health_check)
+cli.add_command(dependency_viz)
+cli.add_command(environment_status)
 
 
 def main():
