@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Terminal, LayoutDashboard, Layers, Plus, Github } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -64,17 +66,17 @@ export function Navbar() {
             rel="noopener noreferrer"
             className="hidden sm:flex"
           >
-            <div className="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
-              <Github className="h-3.5 w-3.5" />
+            <Button variant="default" size="sm" className="gap-2 h-9 px-4 font-medium">
+              <Github className="h-4 w-4" />
               GitHub
-            </div>
+            </Button>
           </Link>
-          <div className="flex items-center gap-1 rounded-full border px-2 py-1">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-medium text-muted-foreground">
+          <Badge variant="destructive" className="flex items-center gap-1 px-2 py-1">
+            <span className="h-2 w-2 rounded-full bg-background animate-pulse" />
+            <span className="text-[10px] font-medium">
               v0.3.0
             </span>
-          </div>
+          </Badge>
           <ThemeToggle />
         </div>
       </div>

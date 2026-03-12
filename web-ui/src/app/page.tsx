@@ -342,7 +342,7 @@ export default function Home() {
                 <Card className="group h-full cursor-pointer transition-all hover:shadow-lg hover:border-primary/20 hover:-translate-y-0.5">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-2xl">{t.icon}</span>
+                      <t.icon className="h-8 w-8" />
                       <Badge variant="secondary" className="text-[10px] font-medium">
                         {t.framework}
                       </Badge>

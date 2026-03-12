@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
+import { platform } from "os";
 
 const execAsync = promisify(exec);
 
@@ -17,8 +18,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build the CLI command
-    const parts = ["idp-cli", "create-service", name, "--template", template];
+    // Build the CLI command using Python module execution
+    const rootPath = path.resolve(process.cwd(), "..");
+    const parts = ["python", "-m", "idp_cli.cli", "create-service", name, "--template", template];
 
     if (ci && ci !== "github-actions") {
       parts.push("--ci", ci);
@@ -39,11 +41,23 @@ export async function POST(request: NextRequest) {
     }
 
     const command = parts.join(" ");
-
-    const { stdout, stderr } = await execAsync(command, {
+    const execOptions: any = {
       timeout: 30000,
-      cwd: outputDir || process.cwd(),
-    });
+      cwd: rootPath, // Always execute from root directory
+      env: { 
+        ...process.env, 
+        PYTHONPATH: rootPath,
+        PYTHONIOENCODING: "utf-8",
+        PYTHONLEGACYWINDOWSSTDIO: "utf-8"
+      },
+    };
+
+    console.log("Executing command:", command);
+    console.log("Working directory:", execOptions.cwd);
+    console.log("Platform:", platform());
+
+    // Try without shell first to avoid spawn issues
+    const { stdout, stderr } = await execAsync(command, execOptions);
 
     return NextResponse.json({
       success: true,

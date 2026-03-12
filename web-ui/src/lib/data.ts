@@ -1,3 +1,24 @@
+import {
+  IconBrandPython,
+  IconBrandJavascript,
+  IconBrandGolang,
+  IconBrandRust,
+  IconDeviceDesktop,
+  IconBrain,
+  IconBrandReact,
+  IconBrandNextjs,
+  IconWorld,
+  IconTerminal,
+  IconSettings,
+  IconBrandGithub,
+  IconBrandGitlab,
+  IconTools,
+  IconContainer,
+  IconGitMerge,
+  IconGitPullRequest,
+  IconX,
+} from "@tabler/icons-react";
+
 export type Template = {
   id: string;
   name: string;
@@ -5,7 +26,7 @@ export type Template = {
   language: string;
   framework: string;
   category: "backend" | "frontend" | "tools";
-  icon: string;
+  icon: any; // Tabler icon component
   color: string;
   features: string[];
 };
@@ -14,21 +35,21 @@ export type CIProvider = {
   id: string;
   name: string;
   description: string;
-  icon: string;
+  icon: any; // Tabler icon component
 };
 
 export type DeployTarget = {
   id: string;
   name: string;
   description: string;
-  icon: string;
+  icon: any; // Tabler icon component
 };
 
 export type GitOpsTool = {
   id: string;
   name: string;
   description: string;
-  icon: string;
+  icon: any; // Tabler icon component
 };
 
 export const templates: Template[] = [
@@ -39,7 +60,7 @@ export const templates: Template[] = [
     language: "Python",
     framework: "FastAPI",
     category: "backend",
-    icon: "🐍",
+    icon: IconBrandPython,
     color: "from-yellow-500 to-green-500",
     features: ["REST API", "OpenAPI docs", "Async", "Pydantic models", "Health checks"],
   },
@@ -50,7 +71,7 @@ export const templates: Template[] = [
     language: "JavaScript",
     framework: "Express",
     category: "backend",
-    icon: "🟢",
+    icon: IconBrandJavascript,
     color: "from-green-500 to-emerald-600",
     features: ["REST API", "Middleware", "Routing", "Error handling", "Validation"],
   },
@@ -61,7 +82,7 @@ export const templates: Template[] = [
     language: "Go",
     framework: "Gin",
     category: "backend",
-    icon: "🔵",
+    icon: IconBrandGolang,
     color: "from-cyan-500 to-blue-600",
     features: ["REST API", "Middleware", "Graceful shutdown", "CORS", "Prometheus"],
   },
@@ -72,7 +93,7 @@ export const templates: Template[] = [
     language: "Rust",
     framework: "Axum",
     category: "backend",
-    icon: "🦀",
+    icon: IconBrandRust,
     color: "from-orange-500 to-red-600",
     features: ["REST API", "Type-safe", "Async", "Tower middleware", "Tracing"],
   },
@@ -83,7 +104,7 @@ export const templates: Template[] = [
     language: "Python",
     framework: "Strawberry",
     category: "backend",
-    icon: "🔮",
+    icon: IconDeviceDesktop,
     color: "from-pink-500 to-purple-600",
     features: ["GraphQL", "Type-safe", "Subscriptions", "DataLoaders", "Playground"],
   },
@@ -94,7 +115,7 @@ export const templates: Template[] = [
     language: "Python",
     framework: "FastAPI",
     category: "backend",
-    icon: "🧠",
+    icon: IconBrain,
     color: "from-violet-500 to-purple-700",
     features: ["ML Serving", "Model versioning", "Batch predict", "Health checks", "Metrics"],
   },
@@ -105,7 +126,7 @@ export const templates: Template[] = [
     language: "TypeScript",
     framework: "React",
     category: "frontend",
-    icon: "⚛️",
+    icon: IconBrandReact,
     color: "from-sky-400 to-blue-600",
     features: ["TypeScript", "Vite", "React Router", "Zustand", "React Query"],
   },
@@ -116,7 +137,7 @@ export const templates: Template[] = [
     language: "TypeScript",
     framework: "Next.js",
     category: "frontend",
-    icon: "▲",
+    icon: IconBrandNextjs,
     color: "from-neutral-600 to-neutral-900",
     features: ["App Router", "API routes", "Tailwind CSS", "Server components", "TypeScript"],
   },
@@ -127,7 +148,7 @@ export const templates: Template[] = [
     language: "JavaScript",
     framework: "Vanilla",
     category: "frontend",
-    icon: "🌐",
+    icon: IconWorld,
     color: "from-amber-400 to-orange-500",
     features: ["Responsive", "SEO", "Accessible", "Animations", "Contact form"],
   },
@@ -138,7 +159,7 @@ export const templates: Template[] = [
     language: "Python",
     framework: "Click",
     category: "tools",
-    icon: "🖥️",
+    icon: IconTerminal,
     color: "from-emerald-500 to-teal-600",
     features: ["CLI", "Rich UI", "Config mgmt", "Sub-commands", "Testing"],
   },
@@ -149,7 +170,7 @@ export const templates: Template[] = [
     language: "Python",
     framework: "Celery",
     category: "tools",
-    icon: "⚙️",
+    icon: IconSettings,
     color: "from-slate-500 to-slate-700",
     features: ["Task queue", "Scheduling", "Redis", "Retry logic", "Monitoring"],
   },
@@ -160,19 +181,19 @@ export const ciProviders: CIProvider[] = [
     id: "github-actions",
     name: "GitHub Actions",
     description: "Build, Test, Security scan, Docker build, Deploy",
-    icon: "🐙",
+    icon: IconBrandGithub,
   },
   {
     id: "gitlab-ci",
     name: "GitLab CI",
     description: "Lint, Test, Security, Build, Deploy (staging + production)",
-    icon: "🦊",
+    icon: IconBrandGitlab,
   },
   {
     id: "jenkins",
     name: "Jenkins",
     description: "Checkout, Lint, Test, Security, Docker build/push, Deploy",
-    icon: "🔧",
+    icon: IconTools,
   },
 ];
 
@@ -181,13 +202,13 @@ export const deployTargets: DeployTarget[] = [
     id: "kubernetes",
     name: "Kubernetes",
     description: "Deploy using Kubernetes manifests with Kustomize overlays",
-    icon: "☸️",
+    icon: IconContainer,
   },
   {
     id: "helm",
     name: "Helm",
     description: "Deploy using Helm charts with values per environment",
-    icon: "⎈",
+    icon: IconSettings,
   },
 ];
 
@@ -196,19 +217,19 @@ export const gitOpsTools: GitOpsTool[] = [
     id: "none",
     name: "None",
     description: "No GitOps integration",
-    icon: "⊘",
+    icon: IconX,
   },
   {
     id: "argocd",
     name: "ArgoCD",
     description: "GitOps with ArgoCD Application manifests",
-    icon: "🔄",
+    icon: IconGitMerge,
   },
   {
     id: "flux",
     name: "Flux CD",
     description: "GitOps with Flux GitRepository and Kustomization",
-    icon: "🔁",
+    icon: IconGitPullRequest,
   },
 ];
 

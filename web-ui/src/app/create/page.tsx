@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import React from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -319,7 +320,7 @@ function StepTemplate({
           >
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <span className="text-2xl">{t.icon}</span>
+                <t.icon className="h-8 w-8" />
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="text-[10px]">
                     {t.framework}
@@ -413,7 +414,7 @@ function StepConfigure({
               >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-xl">{ci.icon}</span>
+                    <ci.icon className="h-6 w-6" />
                     <div>
                       <p className="text-sm font-medium">{ci.name}</p>
                       <p className="text-[10px] text-muted-foreground line-clamp-1">
@@ -444,7 +445,7 @@ function StepConfigure({
               >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-xl">{dt.icon}</span>
+                    <dt.icon className="h-6 w-6" />
                     <div>
                       <p className="text-sm font-medium">{dt.name}</p>
                       <p className="text-[10px] text-muted-foreground">
@@ -475,7 +476,7 @@ function StepConfigure({
               >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <span className="text-lg">{gt.icon}</span>
+                    <gt.icon className="h-5 w-5" />
                     <div>
                       <p className="text-sm font-medium">{gt.name}</p>
                       <p className="text-[10px] text-muted-foreground">
@@ -557,7 +558,7 @@ function StepConfigure({
               {selectedTemplate ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <span className="text-3xl">{selectedTemplate.icon}</span>
+                    <selectedTemplate.icon className="h-8 w-8" />
                     <div>
                       <p className="font-semibold">{selectedTemplate.name}</p>
                       <p className="text-xs text-muted-foreground">
@@ -663,7 +664,7 @@ function StepGenerate({
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <span className="text-3xl">{template.icon}</span>
+                {React.createElement(template.icon, { className: "h-8 w-8" })}
                 <div>
                   <p className="font-semibold text-lg">{config.name}</p>
                   <p className="text-sm text-muted-foreground">
