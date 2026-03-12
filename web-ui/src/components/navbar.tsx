@@ -72,7 +72,7 @@ export function Navbar() {
           <div className="flex items-center gap-1 rounded-full border px-2 py-1">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-[10px] font-medium text-muted-foreground">
-              v0.2.0
+              v0.3.0
             </span>
           </div>
           <ThemeToggle />

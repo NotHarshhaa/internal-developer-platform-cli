@@ -1,6 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 IDP-CLI Web Interface
 
-## Getting Started
+A modern web interface for the Internal Developer Platform CLI, providing a beautiful and intuitive way to create services, monitor health, visualize dependencies, and manage platform operations.
+
+**NEW in v0.3.0**: Enhanced with health monitoring dashboard, dependency visualization, and environment status checking.
+
+## ✨ Features
+
+### 🎯 Service Management
+- **Service Creation**: Intuitive wizard for creating production-ready services
+- **Template Browser**: Explore 11 battle-tested service templates
+- **Real-time Preview**: See your configuration changes instantly
+
+### 🏥 Operational Observability (NEW)
+- **Health Monitoring**: Real-time service health status and alerts
+- **Dependency Visualization**: Interactive service relationship maps
+- **Environment Status**: Infrastructure readiness verification
+
+### 🎨 Modern UI/UX
+- **Dark Mode First**: Beautiful dark theme with light mode support
+- **Responsive Design**: Works seamlessly on desktop and mobile
+- **Smooth Animations**: delightful micro-interactions and transitions
+- **Accessible**: Built with accessibility best practices
+
+## 🛠️ Technology Stack
+
+- **Framework**: Next.js 16 with App Router
+- **UI Components**: shadcn/ui + Radix UI
+- **Styling**: Tailwind CSS
+- **Icons**: Lucide React
+- **Animations**: Framer Motion
+- **Themes**: next-themes
+
+## 🚀 Getting Started
 
 First, run the development server:
 

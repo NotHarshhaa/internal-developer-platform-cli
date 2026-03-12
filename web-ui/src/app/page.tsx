@@ -14,6 +14,9 @@ import {
   Target,
   Settings,
   Eye,
+  Heart,
+  Network,
+  CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +33,7 @@ const stats = [
   { label: "Templates", value: "11", icon: Layers, color: "text-blue-500" },
   { label: "CI/CD Providers", value: "3", icon: GitBranch, color: "text-green-500" },
   { label: "Deploy Targets", value: "2", icon: Container, color: "text-purple-500" },
-  { label: "Languages", value: "6", icon: Terminal, color: "text-orange-500" },
+  { label: "Commands", value: "5", icon: Terminal, color: "text-orange-500" },
 ];
 
 const capabilities = [
@@ -41,34 +44,34 @@ const capabilities = [
     color: "bg-blue-500/10 text-blue-500",
   },
   {
+    title: "Health Monitoring",
+    description: "Real-time service health checks with continuous monitoring and alerts",
+    icon: Heart,
+    color: "bg-red-500/10 text-red-500",
+  },
+  {
+    title: "Dependency Visualization",
+    description: "Visualize service relationships and detect circular dependencies",
+    icon: Network,
+    color: "bg-purple-500/10 text-purple-500",
+  },
+  {
+    title: "Environment Status",
+    description: "Verify infrastructure readiness before deployments",
+    icon: CheckCircle,
+    color: "bg-green-500/10 text-green-500",
+  },
+  {
     title: "CI/CD Automation",
     description: "Auto-generate pipelines for GitHub Actions, GitLab CI, or Jenkins",
     icon: GitBranch,
-    color: "bg-green-500/10 text-green-500",
+    color: "bg-emerald-500/10 text-emerald-500",
   },
   {
     title: "Container Ready",
     description: "Multi-stage Docker builds with security best practices baked in",
     icon: Container,
-    color: "bg-purple-500/10 text-purple-500",
-  },
-  {
-    title: "Kubernetes Native",
-    description: "Kustomize overlays for dev, staging, and production environments",
-    icon: Shield,
     color: "bg-orange-500/10 text-orange-500",
-  },
-  {
-    title: "Observability",
-    description: "Prometheus rules, Grafana dashboards, and ServiceMonitor configs",
-    icon: BarChart3,
-    color: "bg-pink-500/10 text-pink-500",
-  },
-  {
-    title: "GitOps Ready",
-    description: "ArgoCD or Flux CD manifests for declarative deployments",
-    icon: Zap,
-    color: "bg-amber-500/10 text-amber-500",
   },
 ];
 
@@ -83,7 +86,7 @@ export default function Home() {
           <div className="text-center">
             <Badge variant="secondary" className="mb-6 px-4 py-1.5 text-xs font-medium">
               <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-              v0.2.0 — 11 Templates Available
+              v0.3.0 — Health Monitoring & Observability
             </Badge>
             <h1 className="text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
               Internal Developer
@@ -94,8 +97,8 @@ export default function Home() {
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
               Self-service infrastructure for developers. Generate production-ready
-              services with CI/CD, Docker, Kubernetes, and monitoring — all from a
-              beautiful web interface.
+              services with CI/CD, Docker, Kubernetes, monitoring, and observability — 
+              all from a beautiful web interface.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link href="/create">
@@ -115,6 +118,20 @@ export default function Home() {
                   Browse Templates
                 </Button>
               </Link>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+              <Button variant="ghost" size="sm" className="gap-2 text-xs">
+                <Heart className="h-3 w-3" />
+                Health Monitor
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-2 text-xs">
+                <Network className="h-3 w-3" />
+                Dependencies
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-2 text-xs">
+                <CheckCircle className="h-3 w-3" />
+                Environment Check
+              </Button>
             </div>
           </div>
         </div>
@@ -140,10 +157,10 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Everything you need to ship faster
+              Complete Platform Engineering Toolkit
             </h2>
             <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-              From code scaffolding to production deployment, the IDP CLI handles it all.
+              From service creation to operational observability, the IDP CLI handles it all.
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -364,7 +381,7 @@ export default function Home() {
             Ready to accelerate your development?
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-            Stop spending hours on boilerplate. Create production-ready services in seconds.
+            Stop spending hours on boilerplate and operational overhead. Create production-ready services and monitor them with ease.
           </p>
           <div className="mt-8 flex items-center justify-center gap-4">
             <Link href="/create">
