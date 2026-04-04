@@ -15,6 +15,9 @@ from idp_cli.commands.environment_status import environment_status
 from idp_cli.commands.service_management import service_group
 from idp_cli.commands.environment_management import env_group
 from idp_cli.commands.enhanced_health import enhanced_health
+from idp_cli.commands.security_scanning import security_group
+from idp_cli.commands.cost_management import cost_group
+from idp_cli.commands.api_documentation import api_group
 from idp_cli.utils.console import console
 
 
@@ -114,6 +117,27 @@ def cli():
       idp-cli health --trends 24
 
     \b
+    Security Scanning:
+      idp-cli security scan payment-service:latest
+      idp-cli security scan ./src --type code --scanner snyk
+      idp-cli security history --image payment-service:latest
+      idp-cli security policy --set critical:0 --set high:1
+
+    \b
+    Cost Management:
+      idp-cli cost report --environment prod
+      idp-cli cost usage payment-service --environment staging
+      idp-cli cost scale user-service --replicas 3
+      idp-cli cost optimize --environment prod
+
+    \b
+    API Documentation:
+      idp-cli api discover payment-service
+      idp-cli api docs user-service --format markdown
+      idp-cli api test payment-service /health
+      idp-cli api list --environment prod
+
+    \b
     Service Creation:
       idp-cli create-service payment-service --template python-api
       idp-cli create-service user-service --template node-api --ci github-actions
@@ -136,6 +160,9 @@ cli.add_command(dependency_viz)
 cli.add_command(environment_status)
 cli.add_command(service_group)
 cli.add_command(env_group)
+cli.add_command(security_group)
+cli.add_command(cost_group)
+cli.add_command(api_group)
 
 
 def main():

@@ -4,17 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "idp-cli"
-version = "0.3.0"
-description = "Internal Developer Platform CLI — Self-service infrastructure, service creation, health monitoring, and dependency visualization for developers"
+version = "1.0.0"
+description = "Internal Developer Platform CLI — Complete self-service infrastructure with service management, security scanning, cost optimization, and API documentation"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
 authors = [
     {name = "H A R S H H A A", email = "harshhaa03@gmail.com"},
 ]
-keywords = ["cli", "platform-engineering", "devops", "kubernetes", "microservices", "idp", "health-monitoring", "dependency-visualization"]
+keywords = ["cli", "platform-engineering", "devops", "kubernetes", "microservices", "idp", "health-monitoring", "dependency-visualization", "security-scanning", "cost-management", "api-documentation", "service-management"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",

@@ -4,7 +4,7 @@ A powerful CLI tool that enables **self-service infrastructure, service creation
 
 The IDP CLI automates the creation of production-ready services by generating **repositories, CI/CD pipelines, Kubernetes deployments, and observability integrations** — enabling developers to bootstrap new services in seconds.
 
-**NEW in v0.4.0**: Enhanced with **service lifecycle management, environment promotion workflows, and advanced health monitoring with SLA tracking** for complete platform operations.
+**NEW in v1.0.0**: Complete enterprise-grade platform with **security scanning, cost management, and API documentation** - the definitive internal developer platform solution.
 
 ---
 
@@ -210,6 +210,66 @@ idp-cli health --service user-service --trends 24
 idp-cli health --service payment-service --detailed --environment prod
 ```
 
+### � Security Scanning
+
+Comprehensive security vulnerability management for containers and source code.
+
+```bash
+# Scan container image for vulnerabilities
+idp-cli security scan payment-service:latest --scanner trivy
+
+# Scan source code with Snyk
+idp-cli security scan ./src --type code --scanner snyk
+
+# Check against security policies
+idp-cli security scan payment-service:latest --policy-check
+
+# Manage security policies
+idp-cli security policy --set critical:0 --set high:1
+
+# View scan history
+idp-cli security history --image payment-service:latest
+```
+
+### 💰 Cost Management
+
+Complete cloud cost visibility and resource optimization.
+
+```bash
+# Generate comprehensive cost report
+idp-cli cost report --environment prod
+
+# Analyze resource usage for optimization
+idp-cli cost usage payment-service --environment staging
+
+# Scale services with cost impact analysis
+idp-cli cost scale user-service --replicas 3
+
+# Get cost optimization recommendations
+idp-cli cost optimize --environment prod
+```
+
+### 📚 API Documentation
+
+Automatic API discovery, documentation generation, and testing.
+
+```bash
+# Discover API endpoints for services
+idp-cli api discover payment-service --environment prod
+
+# Generate OpenAPI specification
+idp-cli api docs user-service --format openapi
+
+# Generate Markdown documentation
+idp-cli api docs payment-service --format markdown --output api-docs.md
+
+# Test API endpoints
+idp-cli api test payment-service /health
+
+# List all discovered APIs
+idp-cli api list --environment prod
+```
+
 ### 🔗 Service Dependency Visualization
 
 Understand service relationships and identify potential issues like circular dependencies.
@@ -287,7 +347,7 @@ cd internal-developer-platform-cli
 pip install -e .
 ```
 
-**Latest Version**: v0.4.0 (includes service lifecycle management, environment promotion, and advanced health monitoring)
+**Latest Version**: v1.0.0 (complete enterprise-grade platform with security, cost, and API management)
 
 ---
 
@@ -420,6 +480,9 @@ idp-cli create-service --help
 idp-cli service --help
 idp-cli env --help
 idp-cli health --help
+idp-cli security --help
+idp-cli cost --help
+idp-cli api --help
 idp-cli deps --help
 idp-cli env-status --help
 ```
@@ -448,11 +511,17 @@ Developer Request
 ├───────────────────┤
 │ Monitoring Gen     │ → Prometheus rules, Grafana dashboards
 ├───────────────────┤
-│ Health Monitor     │ → Service health checks and monitoring
+│ Security Scanner   │ → Container and source code vulnerability scanning
+├───────────────────┤
+│ Cost Manager       │ → Cloud cost analysis and resource optimization
+├───────────────────┤
+│ API Documentation  │ → API discovery, documentation generation, and testing
 ├───────────────────┤
 │ Service Manager    │ → Service lifecycle operations (list, info, restart, logs)
 ├───────────────────┤
 │ Environment Manager│ → Environment promotion and management
+├───────────────────┤
+│ Health Monitor     │ → Service health checks and monitoring
 ├───────────────────┤
 │ Dependency Analyzer│ → Service relationships and deployment order
 ├───────────────────┤
@@ -499,6 +568,9 @@ black idp_cli/ tests/
 - **Provide complete service lifecycle management**
 - **Enable environment promotion workflows with policy checks**
 - **Provide advanced health monitoring with SLA tracking**
+- **Offer comprehensive security vulnerability scanning**
+- **Deliver cloud cost visibility and optimization**
+- **Provide automatic API documentation and testing**
 - **Automate platform operations** and reduce manual overhead
 
 ---
@@ -520,28 +592,28 @@ black idp_cli/ tests/
 ### ✅ Completed Features
 - [x] Service scaffolding with 11 production-ready templates
 - [x] CI/CD pipeline generation (GitHub Actions, GitLab CI, Jenkins)
-- [x] Docker configuration and Kubernetes manifests
+- [x] Docker configuration with multi-stage builds
+- [x] Kubernetes deployment manifests with Kustomize
 - [x] GitOps integration (ArgoCD, Flux)
-- [x] Monitoring and observability setup
+- [x] Monitoring setup (Prometheus, Grafana)
+- [x] Documentation generation
+- [x] Multi-environment support
 - [x] Service health monitoring
 - [x] Service dependency visualization  
 - [x] Environment status checking
 - [x] **Service lifecycle management** (list, info, restart, logs)
 - [x] **Environment promotion workflows** with policy checks
 - [x] **Advanced health monitoring** with SLA tracking
+- [x] **Security vulnerability scanning** (Trivy, Snyk integration)
+- [x] **Cloud cost management** and resource optimization
+- [x] **API documentation** generation and testing
 
-### 🚧 In Progress (Phase 2)
-- [ ] Security scanning integration (Trivy, Snyk)
-- [ ] Cost management and resource optimization
-- [ ] API documentation viewer
-
-### 📋 Planned Features
+### 📋 Future Enhancements
 - [ ] Service catalog integration
 - [ ] Policy as Code support
 - [ ] Infrastructure provisioning (Terraform)
 - [ ] Web portal interface
 - [ ] Plugin architecture
-- [ ] Multi-cluster deployment
 - [ ] Secrets management integration
 - [ ] Custom template support
 
