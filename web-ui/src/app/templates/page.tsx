@@ -104,7 +104,6 @@ export default function TemplatesPage() {
         <Button
           variant={!selectedLang ? "secondary" : "ghost"}
           size="sm"
-          className="h-7 text-xs"
           onClick={() => setSelectedLang(null)}
         >
           All Languages
@@ -114,7 +113,6 @@ export default function TemplatesPage() {
             key={lang}
             variant={selectedLang === lang ? "secondary" : "ghost"}
             size="sm"
-            className="h-7 text-xs"
             onClick={() =>
               setSelectedLang(selectedLang === lang ? null : lang)
             }

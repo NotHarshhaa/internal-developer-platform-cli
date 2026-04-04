@@ -102,7 +102,7 @@ export default function Home() {
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link href="/create">
-                <Button size="lg" className="gap-2 text-base px-8 h-12 rounded-xl">
+                <Button size="lg" className="gap-2">
                   <Rocket className="h-4 w-4" />
                   Create a Service
                   <ArrowRight className="h-4 w-4" />
@@ -112,7 +112,7 @@ export default function Home() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="gap-2 text-base px-8 h-12 rounded-xl"
+                  className="gap-2"
                 >
                   <Layers className="h-4 w-4" />
                   Browse Templates
@@ -120,15 +120,15 @@ export default function Home() {
               </Link>
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-              <Button variant="ghost" size="sm" className="gap-2 text-xs">
+              <Button variant="ghost" size="sm" className="gap-2">
                 <Heart className="h-3 w-3" />
                 Health Monitor
               </Button>
-              <Button variant="ghost" size="sm" className="gap-2 text-xs">
+              <Button variant="ghost" size="sm" className="gap-2">
                 <Network className="h-3 w-3" />
                 Dependencies
               </Button>
-              <Button variant="ghost" size="sm" className="gap-2 text-xs">
+              <Button variant="ghost" size="sm" className="gap-2">
                 <CheckCircle className="h-3 w-3" />
                 Environment Check
               </Button>
@@ -385,7 +385,7 @@ export default function Home() {
           </p>
           <div className="mt-8 flex items-center justify-center gap-4">
             <Link href="/create">
-              <Button size="lg" className="gap-2 rounded-xl h-12 px-8">
+              <Button size="lg" className="gap-2">
                 <Terminal className="h-4 w-4" />
                 Get Started Now
               </Button>

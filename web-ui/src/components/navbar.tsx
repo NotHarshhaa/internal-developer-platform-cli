@@ -66,7 +66,7 @@ export function Navbar() {
             rel="noopener noreferrer"
             className="hidden sm:flex"
           >
-            <Button variant="default" size="sm" className="gap-2 h-9 px-4 font-medium">
+            <Button variant="default" size="sm" className="gap-2">
               <Github className="h-4 w-4" />
               GitHub
             </Button>

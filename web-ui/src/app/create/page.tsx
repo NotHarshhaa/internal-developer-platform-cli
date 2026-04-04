@@ -253,7 +253,7 @@ function CreateServiceContent() {
             )}
           </Button>
         ) : (
-          <Button variant="outline" className="gap-2 text-green-600" disabled>
+          <Button variant="outline" className="gap-2" disabled>
             <CheckCircle2 className="h-4 w-4" />
             Generated!
           </Button>
@@ -721,7 +721,7 @@ function StepGenerate({
               <Terminal className="h-4 w-4" />
               CLI Command
             </CardTitle>
-            <Button variant="ghost" size="sm" onClick={copyCommand} className="gap-1.5 h-8">
+            <Button variant="ghost" size="sm" onClick={copyCommand} className="gap-1.5">
               <Copy className="h-3.5 w-3.5" />
               Copy
             </Button>
