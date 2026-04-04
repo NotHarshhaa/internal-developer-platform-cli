@@ -1,39 +1,52 @@
 # 🚀 Internal Developer Platform (IDP) CLI
 
-A powerful CLI tool that enables **self-service infrastructure, service creation, and operational observability for developers**, following modern **Platform Engineering principles**.
+A powerful CLI tool that enables **self-service infrastructure, service creation, and complete operational management for developers**, following modern **Platform Engineering principles**.
 
 The IDP CLI automates the creation of production-ready services by generating **repositories, CI/CD pipelines, Kubernetes deployments, and observability integrations** — enabling developers to bootstrap new services in seconds.
 
-**NEW in v0.3.0**: Enhanced with **service health monitoring, dependency visualization, and environment status checking** for complete platform observability.
+**NEW in v0.4.0**: Enhanced with **service lifecycle management, environment promotion workflows, and advanced health monitoring with SLA tracking** for complete platform operations.
 
 ---
 
 ## 🎯 Problem
 
-In many organizations, creating a new service requires multiple manual steps:
+In many organizations, creating and managing services requires multiple manual steps:
 
-- Requesting a repository
-- Setting up CI/CD pipelines
-- Writing Dockerfiles
-- Creating Kubernetes manifests
+- Requesting a repository and setting up CI/CD pipelines
+- Writing Dockerfiles and Kubernetes manifests
 - Configuring monitoring and alerts
-- Setting up environments
+- Managing service lifecycle across environments
+- Promoting services through deployment pipelines
+- Monitoring service health and SLA compliance
+- Understanding service dependencies and deployment order
 
-This process slows down development and increases operational overhead. Additionally, **monitoring service health, understanding dependencies, and verifying environment readiness** remain challenging tasks for platform teams.
+This process slows down development and increases operational overhead. Additionally, **service lifecycle management, environment promotion, and comprehensive health monitoring** remain challenging tasks for platform teams.
 
 ---
 
 ## 💡 Solution
 
-The **Internal Developer Platform CLI** provides a **self-service developer platform** where engineers can create fully configured services with a single command, plus **monitor their health, visualize dependencies, and verify environment readiness**.
+The **Internal Developer Platform CLI** provides a **complete self-service developer platform** where engineers can create, manage, and operate fully configured services with simple commands.
 
 Example:
 
 ```bash
+# Create a new service
 idp-cli create-service payment-service --template python-api
+
+# Manage service lifecycle
+idp-cli service list --environment prod
+idp-cli service restart user-service --environment staging
+idp-cli service logs payment-service --follow
+
+# Promote services through environments
+idp-cli env promote payment-service --from dev --to staging
+
+# Monitor comprehensive health with SLA tracking
+idp-cli health --service payment-service --detailed --trends 24
 ```
 
-This automatically generates:
+This automatically generates and manages:
 
 - Service repository with application code
 - CI/CD pipeline (GitHub Actions / GitLab CI / Jenkins)
@@ -42,19 +55,9 @@ This automatically generates:
 - Environment configuration (dev / staging / production)
 - Monitoring setup (Prometheus rules, Grafana dashboards)
 - Documentation templates (README, deployment guide, architecture)
-
-**Plus new operational capabilities**:
-
-```bash
-# Monitor service health across environments
-idp-cli health --environment dev
-
-# Visualize service dependencies and deployment order
-idp-cli deps --format mermaid --check-cycles
-
-# Verify environment infrastructure readiness
-idp-cli env-status --component kubernetes
-```
+- **Service lifecycle operations** (list, info, restart, logs)
+- **Environment promotion workflows** with policy checks
+- **Advanced health monitoring** with SLA compliance tracking
 
 ---
 
@@ -147,19 +150,64 @@ Environment-specific configuration via Kustomize overlays:
 | `staging` | 2 | 500m | 512Mi |
 | `production` | 3 | 1000m | 1Gi |
 
-### 🏥 Service Health Monitoring
+### 🔄 Service Lifecycle Management
 
-Monitor the health and availability of your deployed services across different environments.
+Complete operational control over your deployed services.
 
 ```bash
-# Check health of all services in dev environment
-idp-cli health --environment dev
+# List all services with filtering
+idp-cli service list --environment prod --team backend
 
-# Check health of a specific service
-idp-cli health --service payment-api --environment staging
+# Get detailed service information
+idp-cli service info payment-service --environment staging
 
-# Continuously monitor service health
+# Restart services with readiness checks
+idp-cli service restart user-service --environment prod --wait
+
+# Stream service logs in real-time
+idp-cli service logs worker-service --follow --tail 100
+```
+
+### 🌍 Environment Management & Promotion
+
+Manage environments and promote services with policy-based workflows.
+
+```bash
+# List all environments with health statistics
+idp-cli env list
+
+# Create new environments from existing ones
+idp-cli env create staging --base dev
+
+# Promote services with policy checks
+idp-cli env promote payment-service --from dev --to staging
+
+# Compare environments and detect differences
+idp-cli env diff staging production
+
+# Dry-run promotion to validate policies
+idp-cli env promote user-service --from staging --to prod --dry-run
+```
+
+### 🏥 Advanced Health Monitoring & SLA Tracking
+
+Comprehensive health monitoring with performance metrics and SLA compliance.
+
+```bash
+# Monitor all services in an environment
+idp-cli health --environment prod
+
+# Detailed health analysis with SLA checks
+idp-cli health --service payment-service --detailed
+
+# Real-time health monitoring dashboard
 idp-cli health --watch --interval 15
+
+# Analyze health trends over time
+idp-cli health --service user-service --trends 24
+
+# Performance metrics and resource usage
+idp-cli health --service payment-service --detailed --environment prod
 ```
 
 ### 🔗 Service Dependency Visualization
@@ -239,7 +287,7 @@ cd internal-developer-platform-cli
 pip install -e .
 ```
 
-**Latest Version**: v0.3.0 (includes health monitoring, dependency visualization, and environment status checking)
+**Latest Version**: v0.4.0 (includes service lifecycle management, environment promotion, and advanced health monitoring)
 
 ---
 
@@ -285,7 +333,42 @@ idp-cli create-service api-gateway \
 idp-cli list-templates
 ```
 
-### Check Service Health
+### Service Management
+
+```bash
+# List all services with filtering
+idp-cli service list --environment prod --team backend
+
+# Get detailed service information
+idp-cli service info payment-service --environment staging
+
+# Restart services with readiness checks
+idp-cli service restart user-service --environment prod --wait
+
+# Stream service logs in real-time
+idp-cli service logs worker-service --follow --tail 100
+```
+
+### Environment Management
+
+```bash
+# List all environments with health statistics
+idp-cli env list
+
+# Create new environments from existing ones
+idp-cli env create staging --base dev
+
+# Promote services with policy checks
+idp-cli env promote payment-service --from dev --to staging
+
+# Compare environments and detect differences
+idp-cli env diff staging production
+
+# Dry-run promotion to validate policies
+idp-cli env promote user-service --from staging --to prod --dry-run
+```
+
+### Health Monitoring
 
 ```bash
 # Check all services in dev environment
@@ -293,6 +376,9 @@ idp-cli health --environment dev
 
 # Monitor specific service continuously
 idp-cli health --service payment-api --watch --interval 30
+
+# Detailed health analysis with SLA tracking
+idp-cli health --service payment-service --detailed --trends 24
 ```
 
 ### Visualize Service Dependencies
@@ -331,6 +417,8 @@ idp-cli create-service my-service \
 ```bash
 idp-cli --help
 idp-cli create-service --help
+idp-cli service --help
+idp-cli env --help
 idp-cli health --help
 idp-cli deps --help
 idp-cli env-status --help
@@ -361,6 +449,10 @@ Developer Request
 │ Monitoring Gen     │ → Prometheus rules, Grafana dashboards
 ├───────────────────┤
 │ Health Monitor     │ → Service health checks and monitoring
+├───────────────────┤
+│ Service Manager    │ → Service lifecycle operations (list, info, restart, logs)
+├───────────────────┤
+│ Environment Manager│ → Environment promotion and management
 ├───────────────────┤
 │ Dependency Analyzer│ → Service relationships and deployment order
 ├───────────────────┤
@@ -404,8 +496,9 @@ black idp_cli/ tests/
 - Reduce DevOps bottlenecks
 - Improve developer experience (DevEx)
 - Promote platform engineering practices
-- **Provide operational observability** (health monitoring, dependency visualization)
-- **Ensure environment readiness** before deployments
+- **Provide complete service lifecycle management**
+- **Enable environment promotion workflows with policy checks**
+- **Provide advanced health monitoring with SLA tracking**
 - **Automate platform operations** and reduce manual overhead
 
 ---
@@ -422,15 +515,27 @@ black idp_cli/ tests/
 
 ## � Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for detailed version history and release notes.
+## 🗺️ Roadmap
 
----
-
-## �🚀 Roadmap
-
+### ✅ Completed Features
+- [x] Service scaffolding with 11 production-ready templates
+- [x] CI/CD pipeline generation (GitHub Actions, GitLab CI, Jenkins)
+- [x] Docker configuration and Kubernetes manifests
+- [x] GitOps integration (ArgoCD, Flux)
+- [x] Monitoring and observability setup
 - [x] Service health monitoring
 - [x] Service dependency visualization  
 - [x] Environment status checking
+- [x] **Service lifecycle management** (list, info, restart, logs)
+- [x] **Environment promotion workflows** with policy checks
+- [x] **Advanced health monitoring** with SLA tracking
+
+### 🚧 In Progress (Phase 2)
+- [ ] Security scanning integration (Trivy, Snyk)
+- [ ] Cost management and resource optimization
+- [ ] API documentation viewer
+
+### 📋 Planned Features
 - [ ] Service catalog integration
 - [ ] Policy as Code support
 - [ ] Infrastructure provisioning (Terraform)

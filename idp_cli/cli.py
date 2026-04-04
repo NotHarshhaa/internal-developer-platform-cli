@@ -12,6 +12,9 @@ from idp_cli.commands.list_templates import list_templates
 from idp_cli.commands.health_check import health_check
 from idp_cli.commands.dependency_viz import dependency_viz
 from idp_cli.commands.environment_status import environment_status
+from idp_cli.commands.service_management import service_group
+from idp_cli.commands.environment_management import env_group
+from idp_cli.commands.enhanced_health import enhanced_health
 from idp_cli.utils.console import console
 
 
@@ -90,11 +93,34 @@ def cli():
     monitoring, and documentation — all in seconds.
 
     \b
-    Examples:
+    Service Management:
+      idp-cli service list --environment prod
+      idp-cli service info payment-service
+      idp-cli service restart user-service --environment staging
+      idp-cli service logs worker-service --follow
+
+    \b
+    Environment Management:
+      idp-cli env list
+      idp-cli env create staging --base dev
+      idp-cli env promote payment-service --from dev --to staging
+      idp-cli env diff staging production
+
+    \b
+    Health Monitoring:
+      idp-cli health --environment prod
+      idp-cli health --service payment-service --detailed
+      idp-cli health --watch --interval 15
+      idp-cli health --trends 24
+
+    \b
+    Service Creation:
       idp-cli create-service payment-service --template python-api
       idp-cli create-service user-service --template node-api --ci github-actions
+
+    \b
+    Other Commands:
       idp-cli list-templates
-      idp-cli health --environment dev
       idp-cli deps --format tree
       idp-cli env-status --environment staging
     """
@@ -105,8 +131,11 @@ def cli():
 cli.add_command(create_service)
 cli.add_command(list_templates)
 cli.add_command(health_check)
+cli.add_command(enhanced_health)
 cli.add_command(dependency_viz)
 cli.add_command(environment_status)
+cli.add_command(service_group)
+cli.add_command(env_group)
 
 
 def main():
