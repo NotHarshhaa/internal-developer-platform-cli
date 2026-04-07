@@ -78,29 +78,11 @@ export async function POST(request: NextRequest) {
     if (outputDir) {
       parts.push("--output-dir", outputDir);
     }
-    if (port && port !== 8080) {
-      parts.push("--port", port.toString());
-    }
-    if (replicas && replicas !== 2) {
-      parts.push("--replicas", replicas.toString());
-    }
 
-    // Environment variables
-    if (envVars && Array.isArray(envVars) && envVars.length > 0) {
-      envVars.forEach((env: { key: string; value: string }) => {
-        if (env.key && env.value) {
-          parts.push("--env", `${env.key}=${env.value}`);
-        }
-      });
-    }
-
-    // Resource limits (for K8s)
-    if (k8s && resources) {
-      if (resources.cpuRequest) parts.push("--cpu-request", resources.cpuRequest);
-      if (resources.cpuLimit) parts.push("--cpu-limit", resources.cpuLimit);
-      if (resources.memoryRequest) parts.push("--memory-request", resources.memoryRequest);
-      if (resources.memoryLimit) parts.push("--memory-limit", resources.memoryLimit);
-    }
+    // Note: The following configurations are stored but not passed to CLI
+    // They can be used for post-processing or manual configuration:
+    // - port, replicas, envVars, resources
+    // These would need to be applied manually to the generated K8s manifests
 
     const command = parts.join(" ");
     const execOptions: any = {

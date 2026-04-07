@@ -994,6 +994,15 @@ function StepGenerate({
                   <li>Navigate to the output directory: <code className="font-mono bg-muted px-1 rounded text-xs">{config.outputDir}/{config.name}</code></li>
                   <li>Install dependencies (check README.md for instructions)</li>
                   {config.docker && <li>Build Docker image: <code className="font-mono bg-muted px-1 rounded text-xs">docker build -t {config.name} .</code></li>}
+                  {config.k8s && (config.port !== 8080 || config.replicas !== 2 || config.envVars.length > 0) && (
+                    <li className="text-amber-600 dark:text-amber-400">
+                      <strong>Manual Configuration Required:</strong> Update the generated Kubernetes manifests with your custom settings:
+                      {config.port !== 8080 && ` port: ${config.port}`}
+                      {config.replicas !== 2 && `, replicas: ${config.replicas}`}
+                      {config.envVars.length > 0 && `, ${config.envVars.length} environment variable(s)`}
+                      {(config.resources.cpuRequest !== "100m" || config.resources.memoryRequest !== "128Mi") && `, resource limits`}
+                    </li>
+                  )}
                   {config.k8s && <li>Deploy to Kubernetes: <code className="font-mono bg-muted px-1 rounded text-xs">kubectl apply -k k8s/overlays/dev</code></li>}
                   <li>Review and customize the generated configuration files</li>
                   {config.ci !== "none" && <li>Push to your Git repository to trigger CI/CD pipeline</li>}
