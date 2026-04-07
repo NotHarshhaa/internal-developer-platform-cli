@@ -54,33 +54,33 @@ export default function TemplatesPage() {
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-10 lg:px-8">
       {/* Header */}
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+      <div className="mb-4 sm:mb-10">
+        <h1 className="text-xl sm:text-3xl font-bold tracking-tight sm:text-4xl">
           Templates
         </h1>
-        <p className="mt-2 text-muted-foreground max-w-2xl">
+        <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-muted-foreground max-w-2xl">
           Browse all available service templates. Each template includes
           production-ready code, tests, Docker config, and CI/CD pipelines.
         </p>
       </div>
 
       {/* Filters */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="mb-4 sm:mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           {categories.map((cat) => (
             <Button
               key={cat.id}
               variant={category === cat.id ? "default" : "outline"}
               size="sm"
               onClick={() => setCategory(cat.id)}
-              className="gap-1.5"
+              className="gap-1 sm:gap-1.5 text-xs sm:text-sm h-7 sm:h-8"
             >
               {cat.label}
               <Badge
                 variant={category === cat.id ? "secondary" : "outline"}
-                className="ml-1 text-[10px] h-5 min-w-5 justify-center"
+                className="ml-1 text-[9px] sm:text-[10px] h-4 sm:h-5 min-w-4 sm:min-w-5 justify-center"
               >
                 {cat.count}
               </Badge>
@@ -88,23 +88,24 @@ export default function TemplatesPage() {
           ))}
         </div>
         <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
           <Input
             placeholder="Search templates..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-8 sm:pl-9 h-8 sm:h-10 text-xs sm:text-sm"
           />
         </div>
       </div>
 
       {/* Language filter pills */}
-      <div className="mb-6 flex items-center gap-2 flex-wrap">
-        <Filter className="h-4 w-4 text-muted-foreground mr-1" />
+      <div className="mb-3 sm:mb-6 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+        <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground mr-1" />
         <Button
           variant={!selectedLang ? "secondary" : "ghost"}
           size="sm"
           onClick={() => setSelectedLang(null)}
+          className="text-xs sm:text-sm h-6 sm:h-8"
         >
           All Languages
         </Button>
@@ -116,6 +117,7 @@ export default function TemplatesPage() {
             onClick={() =>
               setSelectedLang(selectedLang === lang ? null : lang)
             }
+            className="text-xs sm:text-sm h-6 sm:h-8"
           >
             {lang}
           </Button>
@@ -145,7 +147,7 @@ export default function TemplatesPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((t) => (
             <TemplateCard key={t.id} template={t} />
           ))}
@@ -159,40 +161,40 @@ function TemplateCard({ template }: { template: Template }) {
   return (
     <Link href={`/create?template=${template.id}`}>
       <Card className="group h-full cursor-pointer transition-all duration-200 hover:shadow-xl hover:border-primary/30 hover:-translate-y-1">
-        <CardHeader>
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-3xl">{React.createElement(template.icon, { className: "w-8 h-8" })}</div>
-            <div className="flex gap-1.5">
-              <Badge variant="secondary" className="text-[10px]">
+        <CardHeader className="pb-1 sm:pb-4 p-2 sm:p-6">
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <div className="text-2xl sm:text-3xl">{React.createElement(template.icon, { className: "w-6 h-6 sm:w-8 sm:h-8" })}</div>
+            <div className="flex gap-1 sm:gap-1.5">
+              <Badge variant="secondary" className="text-[9px] sm:text-[10px] px-1 py-0.5">
                 {template.language}
               </Badge>
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 py-0.5">
                 {template.framework}
               </Badge>
             </div>
           </div>
-          <CardTitle className="text-lg group-hover:text-primary transition-colors">
+          <CardTitle className="text-sm sm:text-lg group-hover:text-primary transition-colors">
             {template.name}
           </CardTitle>
-          <CardDescription className="text-sm leading-relaxed">
+          <CardDescription className="text-xs sm:text-sm leading-relaxed line-clamp-2">
             {template.description}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-1.5 mb-4">
+        <CardContent className="pt-0 p-2 sm:p-6">
+          <div className="flex flex-wrap gap-1 sm:gap-1.5 mb-2 sm:mb-4">
             {template.features.map((f) => (
               <Badge
                 key={f}
                 variant="outline"
-                className="text-[10px] font-normal"
+                className="text-[9px] sm:text-[10px] font-normal px-1 py-0.5"
               >
                 {f}
               </Badge>
             ))}
           </div>
-          <div className="flex items-center text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center text-xs sm:text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
             Use this template
-            <ArrowRight className="ml-1 h-4 w-4" />
+            <ArrowRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
           </div>
         </CardContent>
       </Card>

@@ -143,17 +143,17 @@ function CreateServiceContent() {
   const cliCommand = buildCliCommand(config);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-5xl px-3 py-4 sm:px-6 sm:py-10 lg:px-8">
       {/* Header */}
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold tracking-tight">Create a Service</h1>
-        <p className="mt-2 text-muted-foreground">
+      <div className="mb-4 sm:mb-10">
+        <h1 className="text-xl sm:text-3xl font-bold tracking-tight">Create a Service</h1>
+        <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-muted-foreground">
           Generate a production-ready service in three simple steps.
         </p>
       </div>
 
       {/* Stepper */}
-      <div className="mb-10">
+      <div className="mb-4 sm:mb-10">
         <div className="flex items-center justify-between">
           {steps.map((s, i) => (
             <div key={s.id} className="flex items-center flex-1">
@@ -162,7 +162,7 @@ function CreateServiceContent() {
                   if (s.id < step) setStep(s.id);
                 }}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-4 py-3 transition-all w-full",
+                  "flex items-center gap-1.5 sm:gap-3 rounded-lg sm:rounded-xl px-2 py-2 sm:px-4 sm:py-3 transition-all w-full",
                   step === s.id
                     ? "bg-primary/10 border border-primary/20"
                     : step > s.id
@@ -173,7 +173,7 @@ function CreateServiceContent() {
               >
                 <div
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shrink-0",
+                    "flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-full text-xs sm:text-sm font-bold shrink-0",
                     step > s.id
                       ? "bg-primary text-primary-foreground"
                       : step === s.id
@@ -181,11 +181,11 @@ function CreateServiceContent() {
                       : "bg-muted text-muted-foreground"
                   )}
                 >
-                  {step > s.id ? <Check className="h-4 w-4" /> : s.id}
+                  {step > s.id ? <Check className="h-3 w-3 sm:h-4 sm:w-4" /> : s.id}
                 </div>
-                <div className="text-left hidden sm:block">
-                  <p className="text-sm font-semibold">{s.title}</p>
-                  <p className="text-xs text-muted-foreground">
+                <div className="text-left hidden md:block">
+                  <p className="text-xs sm:text-sm font-semibold">{s.title}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
                     {s.description}
                   </p>
                 </div>
@@ -193,7 +193,7 @@ function CreateServiceContent() {
               {i < steps.length - 1 && (
                 <div
                   className={cn(
-                    "h-px w-8 mx-2 shrink-0",
+                    "h-px w-2 sm:w-8 mx-1 sm:mx-2 shrink-0",
                     step > s.id ? "bg-primary" : "bg-border"
                   )}
                 />
@@ -204,7 +204,7 @@ function CreateServiceContent() {
       </div>
 
       {/* Step Content */}
-      <div className="min-h-[500px]">
+      <div className="min-h-[300px] sm:min-h-[500px]">
         {step === 1 && (
           <StepTemplate
             selected={config.template}
@@ -235,47 +235,50 @@ function CreateServiceContent() {
       </div>
 
       {/* Navigation */}
-      <div className="mt-10 flex items-center justify-between border-t pt-6">
+      <div className="mt-4 sm:mt-10 flex items-center justify-between border-t pt-3 sm:pt-6">
         <Button
           variant="outline"
           onClick={() => setStep(step - 1)}
           disabled={step === 1}
-          className="gap-2"
+          size="sm"
+          className="gap-1.5 sm:gap-2 text-xs sm:text-sm"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
           Back
         </Button>
         {step < 3 ? (
           <Button
             onClick={handleNext}
             disabled={!canProceed()}
-            className="gap-2"
+            size="sm"
+            className="gap-1.5 sm:gap-2 text-xs sm:text-sm"
           >
-            Next
-            <ArrowRight className="h-4 w-4" />
+            Continue
+            <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
         ) : !generated ? (
           <Button
             onClick={handleGenerate}
             disabled={generating}
-            className="gap-2"
+            size="sm"
+            className="gap-1.5 sm:gap-2 text-xs sm:text-sm"
           >
             {generating ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Generating...
+                <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                <span className="hidden xs:inline">Generating...</span>
               </>
             ) : (
               <>
-                <Rocket className="h-4 w-4" />
-                Generate Service
+                <Rocket className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Generate</span>
               </>
             )}
           </Button>
         ) : (
-          <Button variant="outline" className="gap-2" disabled>
-            <CheckCircle2 className="h-4 w-4" />
-            Generated!
+          <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 text-xs sm:text-sm" disabled>
+            <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Generated!</span>
           </Button>
         )}
       </div>
@@ -313,7 +316,7 @@ function StepTemplate({
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-6 flex-wrap">
+      <div className="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-6 flex-wrap">
         {["all", "backend", "frontend", "tools"].map((f) => (
           <Button
             key={f}
@@ -326,7 +329,7 @@ function StepTemplate({
           </Button>
         ))}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((t) => (
           <Card
             key={t.id}
@@ -338,27 +341,27 @@ function StepTemplate({
             )}
             onClick={() => onSelect(t.id)}
           >
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0 sm:pb-3 p-1 sm:p-6">
               <div className="flex items-center justify-between">
-                <t.icon className="h-8 w-8" />
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="text-[10px]">
+                <t.icon className="h-5 w-5 sm:h-8 sm:w-8" />
+                <div className="flex items-center gap-0.5 sm:gap-2">
+                  <Badge variant="secondary" className="text-xs sm:text-[10px] px-1.5 py-0.5">
                     {t.framework}
                   </Badge>
                   {selected === t.id && (
-                    <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                      <Check className="h-3 w-3 text-primary-foreground" />
+                    <div className="h-5 w-5 sm:h-5 sm:w-5 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="h-3 w-3 sm:h-3 sm:w-3 text-primary-foreground" />
                     </div>
                   )}
                 </div>
               </div>
-              <CardTitle className="text-base mt-1">{t.name}</CardTitle>
-              <CardDescription className="text-xs line-clamp-2">
+              <CardTitle className="text-sm sm:text-base mt-0.5">{t.name}</CardTitle>
+              <CardDescription className="text-xs sm:text-xs line-clamp-2">
                 {t.description}
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-0">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CardContent className="pt-0 p-1 sm:p-6 sm:pt-0">
+              <div className="flex items-center gap-0.5 text-xs sm:text-xs text-muted-foreground">
                 <span>{t.language}</span>
                 <span>•</span>
                 <span className="capitalize">{t.category}</span>
@@ -389,11 +392,11 @@ function StepConfigure({
   const selectedTemplate = templates.find((t) => t.id === config.template);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
-      <div className="space-y-8">
+    <div className="grid gap-4 sm:gap-8 lg:grid-cols-[1fr_320px]">
+      <div className="space-y-4 sm:space-y-8">
         {/* Service Name */}
-        <div className="space-y-3">
-          <Label htmlFor="name" className="text-sm font-semibold">
+        <div className="space-y-2 sm:space-y-3">
+          <Label htmlFor="name" className="text-xs sm:text-sm font-semibold">
             Service Name
           </Label>
           <Input
@@ -404,12 +407,12 @@ function StepConfigure({
               setConfig({ ...config, name: e.target.value });
               if (nameError) setNameError(validateName(e.target.value));
             }}
-            className={cn("h-11", nameError && "border-destructive")}
+            className={cn("h-9 sm:h-11 text-sm", nameError && "border-destructive")}
           />
           {nameError ? (
-            <p className="text-xs text-destructive">{nameError}</p>
+            <p className="text-[10px] sm:text-xs text-destructive">{nameError}</p>
           ) : (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
               Lowercase letters, numbers, and hyphens. Must start with a letter.
             </p>
           )}
@@ -418,9 +421,9 @@ function StepConfigure({
         <Separator />
 
         {/* CI/CD */}
-        <div className="space-y-3">
-          <Label className="text-sm font-semibold">CI/CD Provider</Label>
-          <div className="grid gap-3 sm:grid-cols-3">
+        <div className="space-y-2 sm:space-y-3">
+          <Label className="text-xs sm:text-sm font-semibold">CI/CD Provider</Label>
+          <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-3">
             {ciProviders.map((ci) => (
               <Card
                 key={ci.id}
@@ -432,12 +435,12 @@ function StepConfigure({
                 )}
                 onClick={() => setConfig({ ...config, ci: ci.id })}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <ci.icon className="h-6 w-6" />
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <ci.icon className="h-5 w-5 sm:h-6 sm:w-6" />
                     <div>
-                      <p className="text-sm font-medium">{ci.name}</p>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">
+                      <p className="text-xs sm:text-sm font-medium">{ci.name}</p>
+                      <p className="text-[9px] sm:text-[10px] text-muted-foreground line-clamp-1">
                         {ci.description}
                       </p>
                     </div>
@@ -449,9 +452,9 @@ function StepConfigure({
         </div>
 
         {/* Deploy Target */}
-        <div className="space-y-3">
-          <Label className="text-sm font-semibold">Deploy Target</Label>
-          <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2 sm:space-y-3">
+          <Label className="text-xs sm:text-sm font-semibold">Deploy Target</Label>
+          <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-2">
             {deployTargets.map((dt) => (
               <Card
                 key={dt.id}
@@ -463,12 +466,12 @@ function StepConfigure({
                 )}
                 onClick={() => setConfig({ ...config, deploy: dt.id })}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <dt.icon className="h-6 w-6" />
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <dt.icon className="h-5 w-5 sm:h-6 sm:w-6" />
                     <div>
-                      <p className="text-sm font-medium">{dt.name}</p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-xs sm:text-sm font-medium">{dt.name}</p>
+                      <p className="text-[9px] sm:text-[10px] text-muted-foreground">
                         {dt.description}
                       </p>
                     </div>
@@ -480,9 +483,9 @@ function StepConfigure({
         </div>
 
         {/* GitOps */}
-        <div className="space-y-3">
-          <Label className="text-sm font-semibold">GitOps Tool</Label>
-          <div className="grid gap-3 sm:grid-cols-3">
+        <div className="space-y-2 sm:space-y-3">
+          <Label className="text-xs sm:text-sm font-semibold">GitOps Tool</Label>
+          <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-3">
             {gitOpsTools.map((gt) => (
               <Card
                 key={gt.id}
@@ -494,12 +497,12 @@ function StepConfigure({
                 )}
                 onClick={() => setConfig({ ...config, gitops: gt.id })}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <gt.icon className="h-5 w-5" />
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <gt.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                     <div>
-                      <p className="text-sm font-medium">{gt.name}</p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-xs sm:text-sm font-medium">{gt.name}</p>
+                      <p className="text-[9px] sm:text-[10px] text-muted-foreground">
                         {gt.description}
                       </p>
                     </div>
@@ -513,12 +516,12 @@ function StepConfigure({
         <Separator />
 
         {/* Service Configuration */}
-        <div className="space-y-4">
-          <Label className="text-sm font-semibold">Service Configuration</Label>
-          <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-3 sm:space-y-4">
+          <Label className="text-xs sm:text-sm font-semibold">Service Configuration</Label>
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2">
             {/* Port */}
-            <div className="space-y-2">
-              <Label htmlFor="port" className="text-xs flex items-center gap-2">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="port" className="text-[10px] sm:text-xs flex items-center gap-1.5 sm:gap-2">
                 <Server className="h-3 w-3" />
                 Service Port
               </Label>
@@ -529,13 +532,13 @@ function StepConfigure({
                 max="65535"
                 value={config.port}
                 onChange={(e) => setConfig({ ...config, port: parseInt(e.target.value) || 8080 })}
-                className="h-9"
+                className="h-8 sm:h-9 text-sm"
               />
             </div>
 
             {/* Output Directory */}
-            <div className="space-y-2">
-              <Label htmlFor="outputDir" className="text-xs flex items-center gap-2">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="outputDir" className="text-[10px] sm:text-xs flex items-center gap-1.5 sm:gap-2">
                 <FolderOpen className="h-3 w-3" />
                 Output Directory
               </Label>
@@ -543,7 +546,7 @@ function StepConfigure({
                 id="outputDir"
                 value={config.outputDir}
                 onChange={(e) => setConfig({ ...config, outputDir: e.target.value })}
-                className="h-9"
+                className="h-8 sm:h-9 text-sm"
                 placeholder="./output"
               />
             </div>
@@ -552,14 +555,14 @@ function StepConfigure({
 
         {/* Kubernetes Resources (only show if k8s is enabled) */}
         {config.k8s && (
-          <div className="space-y-4">
-            <Label className="text-sm font-semibold flex items-center gap-2">
-              <Cpu className="h-4 w-4" />
+          <div className="space-y-3 sm:space-y-4">
+            <Label className="text-xs sm:text-sm font-semibold flex items-center gap-2">
+              <Cpu className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Kubernetes Resources
             </Label>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="replicas" className="text-xs">Replicas</Label>
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="replicas" className="text-[10px] sm:text-xs">Replicas</Label>
                 <Input
                   id="replicas"
                   type="number"
@@ -567,46 +570,46 @@ function StepConfigure({
                   max="10"
                   value={config.replicas}
                   onChange={(e) => setConfig({ ...config, replicas: parseInt(e.target.value) || 1 })}
-                  className="h-9"
+                  className="h-8 sm:h-9 text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="cpuRequest" className="text-xs">CPU Request</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="cpuRequest" className="text-[10px] sm:text-xs">CPU Request</Label>
                 <Input
                   id="cpuRequest"
                   value={config.resources.cpuRequest}
                   onChange={(e) => setConfig({ ...config, resources: { ...config.resources, cpuRequest: e.target.value } })}
-                  className="h-9"
+                  className="h-8 sm:h-9 text-sm"
                   placeholder="100m"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="cpuLimit" className="text-xs">CPU Limit</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="cpuLimit" className="text-[10px] sm:text-xs">CPU Limit</Label>
                 <Input
                   id="cpuLimit"
                   value={config.resources.cpuLimit}
                   onChange={(e) => setConfig({ ...config, resources: { ...config.resources, cpuLimit: e.target.value } })}
-                  className="h-9"
+                  className="h-8 sm:h-9 text-sm"
                   placeholder="500m"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="memoryRequest" className="text-xs">Memory Request</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="memoryRequest" className="text-[10px] sm:text-xs">Memory Request</Label>
                 <Input
                   id="memoryRequest"
                   value={config.resources.memoryRequest}
                   onChange={(e) => setConfig({ ...config, resources: { ...config.resources, memoryRequest: e.target.value } })}
-                  className="h-9"
+                  className="h-8 sm:h-9 text-sm"
                   placeholder="128Mi"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="memoryLimit" className="text-xs">Memory Limit</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="memoryLimit" className="text-[10px] sm:text-xs">Memory Limit</Label>
                 <Input
                   id="memoryLimit"
                   value={config.resources.memoryLimit}
                   onChange={(e) => setConfig({ ...config, resources: { ...config.resources, memoryLimit: e.target.value } })}
-                  className="h-9"
+                  className="h-8 sm:h-9 text-sm"
                   placeholder="512Mi"
                 />
               </div>
@@ -615,23 +618,23 @@ function StepConfigure({
         )}
 
         {/* Environment Variables */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-semibold">Environment Variables</Label>
+            <Label className="text-xs sm:text-sm font-semibold">Environment Variables</Label>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setConfig({ ...config, envVars: [...config.envVars, { key: "", value: "" }] })}
-              className="gap-1.5 h-8"
+              className="gap-1 sm:gap-1.5 h-7 sm:h-8 text-xs"
             >
               <Plus className="h-3 w-3" />
-              Add Variable
+              <span className="hidden xs:inline">Add</span>
             </Button>
           </div>
           {config.envVars.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-1.5 sm:space-y-2">
               {config.envVars.map((env, idx) => (
-                <div key={idx} className="flex gap-2">
+                <div key={idx} className="flex gap-1.5 sm:gap-2">
                   <Input
                     placeholder="KEY"
                     value={env.key}
@@ -640,7 +643,7 @@ function StepConfigure({
                       newEnvVars[idx].key = e.target.value;
                       setConfig({ ...config, envVars: newEnvVars });
                     }}
-                    className="h-9 font-mono text-xs"
+                    className="h-8 sm:h-9 font-mono text-[10px] sm:text-xs"
                   />
                   <Input
                     placeholder="value"
@@ -650,7 +653,7 @@ function StepConfigure({
                       newEnvVars[idx].value = e.target.value;
                       setConfig({ ...config, envVars: newEnvVars });
                     }}
-                    className="h-9 font-mono text-xs"
+                    className="h-8 sm:h-9 font-mono text-[10px] sm:text-xs"
                   />
                   <Button
                     variant="ghost"
@@ -659,24 +662,24 @@ function StepConfigure({
                       const newEnvVars = config.envVars.filter((_, i) => i !== idx);
                       setConfig({ ...config, envVars: newEnvVars });
                     }}
-                    className="h-9 w-9 p-0"
+                    className="h-8 sm:h-9 w-8 sm:w-9 p-0"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </Button>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">No environment variables configured</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">No environment variables configured</p>
           )}
         </div>
 
         <Separator />
 
         {/* Optional Features */}
-        <div className="space-y-4">
-          <Label className="text-sm font-semibold">Optional Features</Label>
-          <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-3 sm:space-y-4">
+          <Label className="text-xs sm:text-sm font-semibold">Optional Features</Label>
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2">
             {[
               {
                 key: "docker" as const,
@@ -705,13 +708,13 @@ function StepConfigure({
             ].map((feat) => (
               <div
                 key={feat.key}
-                className="flex items-center justify-between rounded-lg border p-4"
+                className="flex items-center justify-between rounded-lg border p-3 sm:p-4"
               >
-                <div className="flex items-center gap-3">
-                  <feat.icon className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <feat.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium">{feat.label}</p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-xs sm:text-sm font-medium">{feat.label}</p>
+                    <p className="text-[9px] sm:text-[10px] text-muted-foreground">
                       {feat.desc}
                     </p>
                   </div>
@@ -836,29 +839,29 @@ function StepGenerate({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       {/* Review summary */}
       <Card>
-        <CardHeader>
-          <CardTitle>Service Configuration Review</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="text-sm sm:text-lg">Service Configuration Review</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Review your settings before generating.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                {React.createElement(template.icon, { className: "h-8 w-8" })}
+        <CardContent className="p-3 sm:p-6">
+          <div className="grid gap-3 sm:gap-6 grid-cols-1 sm:grid-cols-2">
+            <div className="space-y-2 sm:space-y-4">
+              <div className="flex items-center gap-1.5 sm:gap-3">
+                {React.createElement(template.icon, { className: "h-5 w-5 sm:h-8 sm:w-8" })}
                 <div>
-                  <p className="font-semibold text-lg">{config.name}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-semibold text-sm sm:text-lg">{config.name}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     {template.name} • {template.language}
                   </p>
                 </div>
               </div>
               <Separator />
-              <div className="space-y-3">
+              <div className="space-y-1.5 sm:space-y-3">
                 <ConfigRow
                   icon={<GitBranch className="h-4 w-4" />}
                   label="CI/CD"
@@ -876,19 +879,19 @@ function StepGenerate({
                 />
               </div>
             </div>
-            <div className="space-y-3">
-              <p className="text-sm font-semibold mb-2">Included Features</p>
-              <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5 sm:space-y-3">
+              <p className="text-xs sm:text-sm font-semibold mb-1 sm:mb-2">Included Features</p>
+              <div className="grid grid-cols-2 gap-1 sm:gap-2">
                 <FeatureCheck label="Docker" enabled={config.docker} />
                 <FeatureCheck label="Kubernetes" enabled={config.k8s} />
                 <FeatureCheck label="Monitoring" enabled={config.monitoring} />
                 <FeatureCheck label="Docs" enabled={config.docs} />
               </div>
-              <Separator className="my-3" />
-              <p className="text-sm font-semibold mb-2">Template Features</p>
-              <div className="flex flex-wrap gap-1.5">
+              <Separator className="my-1.5 sm:my-3" />
+              <p className="text-xs sm:text-sm font-semibold mb-1 sm:mb-2">Template Features</p>
+              <div className="flex flex-wrap gap-0.5 sm:gap-1.5">
                 {template.features.map((f) => (
-                  <Badge key={f} variant="outline" className="text-[10px]">
+                  <Badge key={f} variant="outline" className="text-[9px] sm:text-[10px] px-1.5 py-0.5">
                     {f}
                   </Badge>
                 ))}
@@ -900,20 +903,20 @@ function StepGenerate({
 
       {/* CLI Command */}
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-1.5 sm:pb-3 p-2 sm:p-6">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Terminal className="h-4 w-4" />
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1 sm:gap-2">
+              <Terminal className="h-3 w-3 sm:h-4 sm:w-4" />
               CLI Command
             </CardTitle>
-            <Button variant="ghost" size="sm" onClick={copyCommand} className="gap-1.5">
-              <Copy className="h-3.5 w-3.5" />
-              Copy
+            <Button variant="ghost" size="sm" onClick={copyCommand} className="gap-1 sm:gap-1.5 h-6 sm:h-8 text-xs">
+              <Copy className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
+              <span className="hidden xs:inline">Copy</span>
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="relative rounded-lg bg-neutral-950 p-4 font-mono text-sm text-green-400 overflow-x-auto">
+        <CardContent className="p-2 sm:p-6">
+          <div className="relative rounded-lg bg-neutral-950 p-2 sm:p-4 font-mono text-[10px] sm:text-sm text-green-400 overflow-x-auto">
             <span className="text-neutral-500">$ </span>
             {cliCommand}
           </div>
@@ -923,18 +926,18 @@ function StepGenerate({
       {/* Generation Output */}
       {(generating || generationOutput) && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Terminal className="h-4 w-4" />
-              {generating ? "Generating Service..." : "Generation Output"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative rounded-lg bg-neutral-950 p-4 font-mono text-xs text-green-400 overflow-x-auto max-h-64 overflow-y-auto">
+          <CardHeader className="pb-1.5 sm:pb-3 p-2 sm:p-6">
+          <CardTitle className="text-xs sm:text-sm flex items-center gap-1 sm:gap-2">
+            <Terminal className="h-3 w-3 sm:h-4 sm:w-4" />
+            {generating ? "Generating..." : "Output"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-2 sm:p-6">
+          <div className="relative rounded-lg bg-neutral-950 p-2 sm:p-4 font-mono text-[10px] sm:text-xs text-green-400 overflow-x-auto max-h-40 sm:max-h-64 overflow-y-auto">
               {generating ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Generating service files...</span>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
+                  <span>Generating...</span>
                 </div>
               ) : (
                 <pre className="whitespace-pre-wrap">{generationOutput}</pre>
@@ -947,17 +950,17 @@ function StepGenerate({
       {/* Generated Files Tree */}
       {generated && generatedFiles.length > 0 && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <FolderOpen className="h-4 w-4" />
-              Generated Files ({generatedFiles.length})
+          <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2">
+              <FolderOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Files ({generatedFiles.length})
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-1 max-h-64 overflow-y-auto">
+          <CardContent className="p-3 sm:p-6">
+            <div className="space-y-0.5 sm:space-y-1 max-h-48 sm:max-h-64 overflow-y-auto">
               {generatedFiles.map((file, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
-                  <FileText className="h-3 w-3" />
+                <div key={idx} className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
+                  <FileText className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                   {file}
                 </div>
               ))}
@@ -969,17 +972,17 @@ function StepGenerate({
       {/* Success Status with Next Steps */}
       {generated && (
         <Card className="border-green-500/30 bg-green-500/5">
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
-                  <CheckCircle2 className="h-6 w-6 text-green-500" />
+          <CardContent className="p-4 sm:p-6">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-green-500/10">
+                  <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-green-500" />
                 </div>
                 <div>
-                  <p className="font-semibold text-green-600 dark:text-green-400">
+                  <p className="text-sm sm:text-base font-semibold text-green-600 dark:text-green-400">
                     Service generated successfully!
                   </p>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">
                     Your service <code className="font-mono bg-muted px-1 rounded">{config.name}</code> has
                     been created in <code className="font-mono bg-muted px-1 rounded">{config.outputDir}</code>
                   </p>
@@ -989,8 +992,8 @@ function StepGenerate({
               <Separator />
               
               <div>
-                <p className="text-sm font-semibold mb-2">Next Steps:</p>
-                <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                <p className="text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2">Next Steps:</p>
+                <ol className="text-[10px] sm:text-sm text-muted-foreground space-y-1.5 sm:space-y-2 list-decimal list-inside">
                   <li>Navigate to the output directory: <code className="font-mono bg-muted px-1 rounded text-xs">{config.outputDir}/{config.name}</code></li>
                   <li>Install dependencies (check README.md for instructions)</li>
                   {config.docker && <li>Build Docker image: <code className="font-mono bg-muted px-1 rounded text-xs">docker build -t {config.name} .</code></li>}
@@ -1009,14 +1012,16 @@ function StepGenerate({
                 </ol>
               </div>
               
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.href = "/create"}>
-                  <Rocket className="h-3.5 w-3.5" />
-                  Create Another Service
+              <div className="flex gap-1.5 sm:gap-2 pt-1.5 sm:pt-2 flex-wrap">
+                <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 text-xs h-8" onClick={() => window.location.href = "/create"}>
+                  <Rocket className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="hidden xs:inline">Create Another</span>
+                  <span className="xs:hidden">New</span>
                 </Button>
-                <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.href = "/"}>
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                  Back to Home
+                <Button variant="outline" size="sm" className="gap-1.5 sm:gap-2 text-xs h-8" onClick={() => window.location.href = "/"}>
+                  <ArrowLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="hidden xs:inline">Back to Home</span>
+                  <span className="xs:hidden">Home</span>
                 </Button>
               </div>
             </div>
