@@ -86,7 +86,7 @@ export default function Home() {
           <div className="text-center">
             <Badge variant="secondary" className="mb-4 sm:mb-6 px-3 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium">
               <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-              v0.3.0 — Health Monitoring & Observability
+              v1.0.0 - Production Ready
             </Badge>
             <h1 className="text-3xl sm:text-6xl lg:text-7xl font-bold tracking-tight">
               Internal Developer

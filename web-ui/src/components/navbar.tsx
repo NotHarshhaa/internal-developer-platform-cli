@@ -71,10 +71,10 @@ export function Navbar() {
               GitHub
             </Button>
           </Link>
-          <Badge variant="destructive" className="flex items-center gap-1 px-2 py-1">
+          <Badge className="flex items-center gap-1 px-2 py-1">
             <span className="h-2 w-2 rounded-full bg-background animate-pulse" />
             <span className="text-[10px] font-medium">
-              v0.3.0
+              v1.0.0
             </span>
           </Badge>
           <ThemeToggle />
