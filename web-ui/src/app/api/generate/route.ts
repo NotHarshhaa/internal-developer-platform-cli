@@ -3,17 +3,52 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import { platform } from "os";
+import fs from "fs";
 
 const execAsync = promisify(exec);
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, template, ci, deploy, gitops, docker, k8s, monitoring, docs, outputDir } = body;
+    const { 
+      name, 
+      template, 
+      ci, 
+      deploy, 
+      gitops, 
+      docker, 
+      k8s, 
+      monitoring, 
+      docs, 
+      outputDir,
+      port,
+      envVars,
+      resources,
+      replicas,
+      healthCheck,
+      dependencies
+    } = body;
 
+    // Validation
     if (!name || !template) {
       return NextResponse.json(
         { success: false, error: "Service name and template are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate service name format
+    if (!/^[a-z][a-z0-9-]*[a-z0-9]$/.test(name)) {
+      return NextResponse.json(
+        { success: false, error: "Service name must start with a letter and contain only lowercase letters, numbers, and hyphens" },
+        { status: 400 }
+      );
+    }
+
+    // Validate port range
+    if (port && (port < 1024 || port > 65535)) {
+      return NextResponse.json(
+        { success: false, error: "Port must be between 1024 and 65535" },
         { status: 400 }
       );
     }
@@ -22,6 +57,7 @@ export async function POST(request: NextRequest) {
     const rootPath = path.resolve(process.cwd(), "..");
     const parts = ["python", "-m", "idp_cli.cli", "create-service", name, "--template", template];
 
+    // CI/CD and deployment options
     if (ci && ci !== "github-actions") {
       parts.push("--ci", ci);
     }
@@ -31,13 +67,39 @@ export async function POST(request: NextRequest) {
     if (gitops && gitops !== "none") {
       parts.push("--gitops", gitops);
     }
+
+    // Feature flags
     if (docker === false) parts.push("--no-docker");
     if (k8s === false) parts.push("--no-k8s");
     if (monitoring === false) parts.push("--no-monitoring");
     if (docs === false) parts.push("--no-docs");
 
+    // Service configuration
     if (outputDir) {
       parts.push("--output-dir", outputDir);
+    }
+    if (port && port !== 8080) {
+      parts.push("--port", port.toString());
+    }
+    if (replicas && replicas !== 2) {
+      parts.push("--replicas", replicas.toString());
+    }
+
+    // Environment variables
+    if (envVars && Array.isArray(envVars) && envVars.length > 0) {
+      envVars.forEach((env: { key: string; value: string }) => {
+        if (env.key && env.value) {
+          parts.push("--env", `${env.key}=${env.value}`);
+        }
+      });
+    }
+
+    // Resource limits (for K8s)
+    if (k8s && resources) {
+      if (resources.cpuRequest) parts.push("--cpu-request", resources.cpuRequest);
+      if (resources.cpuLimit) parts.push("--cpu-limit", resources.cpuLimit);
+      if (resources.memoryRequest) parts.push("--memory-request", resources.memoryRequest);
+      if (resources.memoryLimit) parts.push("--memory-limit", resources.memoryLimit);
     }
 
     const command = parts.join(" ");
@@ -56,23 +118,70 @@ export async function POST(request: NextRequest) {
     console.log("Working directory:", execOptions.cwd);
     console.log("Platform:", platform());
 
-    // Try without shell first to avoid spawn issues
+    // Execute the CLI command
     const { stdout, stderr } = await execAsync(command, execOptions);
+
+    // Extract generated files list
+    const generatedFiles: string[] = [];
+    const outputPath = path.join(rootPath, outputDir || "./output", name);
+    
+    try {
+      // Recursively get all files in the output directory
+      const getAllFiles = (dirPath: string, arrayOfFiles: string[] = []): string[] => {
+        const files = fs.readdirSync(dirPath);
+        
+        files.forEach((file) => {
+          const filePath = path.join(dirPath, file);
+          if (fs.statSync(filePath).isDirectory()) {
+            arrayOfFiles = getAllFiles(filePath, arrayOfFiles);
+          } else {
+            // Store relative path from service root
+            const relativePath = path.relative(outputPath, filePath);
+            arrayOfFiles.push(relativePath.replace(/\\/g, '/'));
+          }
+        });
+        
+        return arrayOfFiles;
+      };
+      
+      if (fs.existsSync(outputPath)) {
+        generatedFiles.push(...getAllFiles(outputPath));
+      }
+    } catch (fileError) {
+      console.warn("Could not read generated files:", fileError);
+    }
 
     return NextResponse.json({
       success: true,
       message: `Service '${name}' created successfully with template '${template}'`,
-      output: stdout,
+      output: stdout || "Service generated successfully!",
       command,
+      files: generatedFiles,
+      stats: {
+        filesGenerated: generatedFiles.length,
+        outputPath: outputPath,
+      },
     });
   } catch (error: unknown) {
-    const err = error as { message?: string; stderr?: string };
-    const errorMessage = err.stderr || err.message || "Unknown error occurred";
+    const err = error as { message?: string; stderr?: string; code?: string };
+    let errorMessage = err.stderr || err.message || "Unknown error occurred";
+    
+    // Provide more helpful error messages
+    if (err.code === "ENOENT") {
+      errorMessage = "Python or IDP CLI not found. Please ensure Python is installed and the IDP CLI is available.";
+    } else if (err.message?.includes("timeout")) {
+      errorMessage = "Service generation timed out. The service might be too complex or the system is slow.";
+    } else if (err.stderr?.includes("ModuleNotFoundError")) {
+      errorMessage = "IDP CLI module not found. Please ensure the CLI is properly installed.";
+    }
+
+    console.error("Generation error:", error);
 
     return NextResponse.json(
       {
         success: false,
         error: errorMessage,
+        details: err.stderr || err.message,
       },
       { status: 500 }
     );

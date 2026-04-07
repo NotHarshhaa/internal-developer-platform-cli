@@ -244,6 +244,17 @@ export type ServiceConfig = {
   monitoring: boolean;
   docs: boolean;
   outputDir: string;
+  port: number;
+  envVars: { key: string; value: string; }[];
+  resources: {
+    cpuRequest: string;
+    cpuLimit: string;
+    memoryRequest: string;
+    memoryLimit: string;
+  };
+  replicas: number;
+  healthCheck: boolean;
+  dependencies: string[];
 };
 
 export const defaultConfig: ServiceConfig = {
@@ -257,4 +268,15 @@ export const defaultConfig: ServiceConfig = {
   monitoring: true,
   docs: true,
   outputDir: "./output",
+  port: 8080,
+  envVars: [],
+  resources: {
+    cpuRequest: "100m",
+    cpuLimit: "500m",
+    memoryRequest: "128Mi",
+    memoryLimit: "512Mi",
+  },
+  replicas: 2,
+  healthCheck: true,
+  dependencies: [],
 };

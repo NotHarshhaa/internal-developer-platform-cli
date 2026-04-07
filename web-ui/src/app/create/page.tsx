@@ -20,6 +20,13 @@ import {
   BarChart3,
   FileText,
   X,
+  Plus,
+  Trash2,
+  FolderOpen,
+  Server,
+  Cpu,
+  HardDrive,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +68,8 @@ function CreateServiceContent() {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [nameError, setNameError] = useState("");
+  const [generationOutput, setGenerationOutput] = useState("");
+  const [generatedFiles, setGeneratedFiles] = useState<string[]>([]);
 
   useEffect(() => {
     const tpl = searchParams.get("template");
@@ -98,6 +107,9 @@ function CreateServiceContent() {
 
   const handleGenerate = async () => {
     setGenerating(true);
+    setGenerationOutput("");
+    setGeneratedFiles([]);
+    
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -105,18 +117,24 @@ function CreateServiceContent() {
         body: JSON.stringify(config),
       });
       const data = await res.json();
+      
       if (data.success) {
         setGenerated(true);
+        setGenerationOutput(data.output || "");
+        setGeneratedFiles(data.files || []);
         toast.success("Service generated successfully!", {
           description: `${config.name} has been created with the ${selectedTemplate?.name} template.`,
         });
       } else {
         toast.error("Generation failed", { description: data.error });
+        setGenerationOutput(data.error || "Unknown error occurred");
       }
-    } catch {
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Could not connect to the server. Make sure the API is running.";
       toast.error("Generation failed", {
-        description: "Could not connect to the server. Make sure the API is running.",
+        description: errorMsg,
       });
+      setGenerationOutput(errorMsg);
     } finally {
       setGenerating(false);
     }
@@ -210,6 +228,8 @@ function CreateServiceContent() {
             generating={generating}
             generated={generated}
             onGenerate={handleGenerate}
+            generationOutput={generationOutput}
+            generatedFiles={generatedFiles}
           />
         )}
       </div>
@@ -492,6 +512,167 @@ function StepConfigure({
 
         <Separator />
 
+        {/* Service Configuration */}
+        <div className="space-y-4">
+          <Label className="text-sm font-semibold">Service Configuration</Label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Port */}
+            <div className="space-y-2">
+              <Label htmlFor="port" className="text-xs flex items-center gap-2">
+                <Server className="h-3 w-3" />
+                Service Port
+              </Label>
+              <Input
+                id="port"
+                type="number"
+                min="1024"
+                max="65535"
+                value={config.port}
+                onChange={(e) => setConfig({ ...config, port: parseInt(e.target.value) || 8080 })}
+                className="h-9"
+              />
+            </div>
+
+            {/* Output Directory */}
+            <div className="space-y-2">
+              <Label htmlFor="outputDir" className="text-xs flex items-center gap-2">
+                <FolderOpen className="h-3 w-3" />
+                Output Directory
+              </Label>
+              <Input
+                id="outputDir"
+                value={config.outputDir}
+                onChange={(e) => setConfig({ ...config, outputDir: e.target.value })}
+                className="h-9"
+                placeholder="./output"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Kubernetes Resources (only show if k8s is enabled) */}
+        {config.k8s && (
+          <div className="space-y-4">
+            <Label className="text-sm font-semibold flex items-center gap-2">
+              <Cpu className="h-4 w-4" />
+              Kubernetes Resources
+            </Label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="replicas" className="text-xs">Replicas</Label>
+                <Input
+                  id="replicas"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={config.replicas}
+                  onChange={(e) => setConfig({ ...config, replicas: parseInt(e.target.value) || 1 })}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cpuRequest" className="text-xs">CPU Request</Label>
+                <Input
+                  id="cpuRequest"
+                  value={config.resources.cpuRequest}
+                  onChange={(e) => setConfig({ ...config, resources: { ...config.resources, cpuRequest: e.target.value } })}
+                  className="h-9"
+                  placeholder="100m"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cpuLimit" className="text-xs">CPU Limit</Label>
+                <Input
+                  id="cpuLimit"
+                  value={config.resources.cpuLimit}
+                  onChange={(e) => setConfig({ ...config, resources: { ...config.resources, cpuLimit: e.target.value } })}
+                  className="h-9"
+                  placeholder="500m"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="memoryRequest" className="text-xs">Memory Request</Label>
+                <Input
+                  id="memoryRequest"
+                  value={config.resources.memoryRequest}
+                  onChange={(e) => setConfig({ ...config, resources: { ...config.resources, memoryRequest: e.target.value } })}
+                  className="h-9"
+                  placeholder="128Mi"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="memoryLimit" className="text-xs">Memory Limit</Label>
+                <Input
+                  id="memoryLimit"
+                  value={config.resources.memoryLimit}
+                  onChange={(e) => setConfig({ ...config, resources: { ...config.resources, memoryLimit: e.target.value } })}
+                  className="h-9"
+                  placeholder="512Mi"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Environment Variables */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-semibold">Environment Variables</Label>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfig({ ...config, envVars: [...config.envVars, { key: "", value: "" }] })}
+              className="gap-1.5 h-8"
+            >
+              <Plus className="h-3 w-3" />
+              Add Variable
+            </Button>
+          </div>
+          {config.envVars.length > 0 ? (
+            <div className="space-y-2">
+              {config.envVars.map((env, idx) => (
+                <div key={idx} className="flex gap-2">
+                  <Input
+                    placeholder="KEY"
+                    value={env.key}
+                    onChange={(e) => {
+                      const newEnvVars = [...config.envVars];
+                      newEnvVars[idx].key = e.target.value;
+                      setConfig({ ...config, envVars: newEnvVars });
+                    }}
+                    className="h-9 font-mono text-xs"
+                  />
+                  <Input
+                    placeholder="value"
+                    value={env.value}
+                    onChange={(e) => {
+                      const newEnvVars = [...config.envVars];
+                      newEnvVars[idx].value = e.target.value;
+                      setConfig({ ...config, envVars: newEnvVars });
+                    }}
+                    className="h-9 font-mono text-xs"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newEnvVars = config.envVars.filter((_, i) => i !== idx);
+                      setConfig({ ...config, envVars: newEnvVars });
+                    }}
+                    className="h-9 w-9 p-0"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">No environment variables configured</p>
+          )}
+        </div>
+
+        <Separator />
+
         {/* Optional Features */}
         <div className="space-y-4">
           <Label className="text-sm font-semibold">Optional Features</Label>
@@ -637,6 +818,8 @@ function StepGenerate({
   generating,
   generated,
   onGenerate,
+  generationOutput,
+  generatedFiles,
 }: {
   config: ServiceConfig;
   template: { id: string; name: string; icon: string; language: string; framework: string; features: string[] };
@@ -644,6 +827,8 @@ function StepGenerate({
   generating: boolean;
   generated: boolean;
   onGenerate: () => void;
+  generationOutput: string;
+  generatedFiles: string[];
 }) {
   const copyCommand = () => {
     navigator.clipboard.writeText(cliCommand);
@@ -735,22 +920,95 @@ function StepGenerate({
         </CardContent>
       </Card>
 
-      {/* Generate status */}
+      {/* Generation Output */}
+      {(generating || generationOutput) && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Terminal className="h-4 w-4" />
+              {generating ? "Generating Service..." : "Generation Output"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="relative rounded-lg bg-neutral-950 p-4 font-mono text-xs text-green-400 overflow-x-auto max-h-64 overflow-y-auto">
+              {generating ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Generating service files...</span>
+                </div>
+              ) : (
+                <pre className="whitespace-pre-wrap">{generationOutput}</pre>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Generated Files Tree */}
+      {generated && generatedFiles.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <FolderOpen className="h-4 w-4" />
+              Generated Files ({generatedFiles.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {generatedFiles.map((file, idx) => (
+                <div key={idx} className="flex items-center gap-2 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
+                  <FileText className="h-3 w-3" />
+                  {file}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Success Status with Next Steps */}
       {generated && (
         <Card className="border-green-500/30 bg-green-500/5">
           <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
-                <CheckCircle2 className="h-6 w-6 text-green-500" />
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
+                  <CheckCircle2 className="h-6 w-6 text-green-500" />
+                </div>
+                <div>
+                  <p className="font-semibold text-green-600 dark:text-green-400">
+                    Service generated successfully!
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Your service <code className="font-mono bg-muted px-1 rounded">{config.name}</code> has
+                    been created in <code className="font-mono bg-muted px-1 rounded">{config.outputDir}</code>
+                  </p>
+                </div>
               </div>
+              
+              <Separator />
+              
               <div>
-                <p className="font-semibold text-green-600 dark:text-green-400">
-                  Service generated successfully!
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Your service <code className="font-mono bg-muted px-1 rounded">{config.name}</code> has
-                  been created. Check the output directory.
-                </p>
+                <p className="text-sm font-semibold mb-2">Next Steps:</p>
+                <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                  <li>Navigate to the output directory: <code className="font-mono bg-muted px-1 rounded text-xs">{config.outputDir}/{config.name}</code></li>
+                  <li>Install dependencies (check README.md for instructions)</li>
+                  {config.docker && <li>Build Docker image: <code className="font-mono bg-muted px-1 rounded text-xs">docker build -t {config.name} .</code></li>}
+                  {config.k8s && <li>Deploy to Kubernetes: <code className="font-mono bg-muted px-1 rounded text-xs">kubectl apply -k k8s/overlays/dev</code></li>}
+                  <li>Review and customize the generated configuration files</li>
+                  {config.ci !== "none" && <li>Push to your Git repository to trigger CI/CD pipeline</li>}
+                </ol>
+              </div>
+              
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.href = "/create"}>
+                  <Rocket className="h-3.5 w-3.5" />
+                  Create Another Service
+                </Button>
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.href = "/"}>
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Back to Home
+                </Button>
               </div>
             </div>
           </CardContent>
