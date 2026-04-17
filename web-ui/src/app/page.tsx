@@ -32,7 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { templates } from "@/lib/data";
 
 const stats = [
-  { label: "Templates", value: "11", icon: Layers },
+  { label: "Templates", value: "16", icon: Layers },
   { label: "CI/CD", value: "3", icon: GitBranch },
   { label: "Targets", value: "2", icon: Container },
   { label: "Commands", value: "5", icon: Terminal },

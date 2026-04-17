@@ -1,0 +1,386 @@
+import { BaseTemplate, GeneratedFile, ServiceConfig } from "./base";
+
+export class VueFrontendTemplate extends BaseTemplate {
+  get templateName(): string {
+    return "vue-frontend";
+  }
+
+  get language(): string {
+    return "typescript";
+  }
+
+  get framework(): string {
+    return "vue";
+  }
+
+  generateFiles(): GeneratedFile[] {
+    const files: GeneratedFile[] = [];
+    const svc = this.getServiceName();
+
+    // package.json
+    this.addFile(files, "package.json", `{
+  "name": "${svc}",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx --fix"
+  },
+  "dependencies": {
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.5",
+    "pinia": "^2.1.7",
+    "axios": "^1.6.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.3",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11",
+    "vue-tsc": "^1.8.27"
+  }
+}
+`);
+
+    // vite.config.ts
+    this.addFile(files, "vite.config.ts", `import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+
+export default defineConfig({
+  plugins: [vue()],
+  server: {
+    port: ${this.config.port},
+  },
+})
+`);
+
+    // tsconfig.json
+    this.addFile(files, "tsconfig.json", `{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
+`);
+
+    // tsconfig.node.json
+    this.addFile(files, "tsconfig.node.json", `{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["vite.config.ts"]
+}
+`);
+
+    // index.html
+    this.addFile(files, "index.html", `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${svc}</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+`);
+
+    // src/main.ts
+    this.addFile(files, "src/main.ts", `import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import App from './App.vue'
+import router from './router'
+import './style.css'
+
+const app = createApp(App)
+app.use(createPinia())
+app.use(router)
+app.mount('#app')
+`);
+
+    // src/App.vue
+    this.addFile(files, "src/App.vue", `<script setup lang="ts">
+import { RouterLink, RouterView } from 'vue-router'
+</script>
+
+<template>
+  <div id="app">
+    <nav class="navbar">
+      <div class="nav-brand">${svc}</div>
+      <div class="nav-links">
+        <RouterLink to="/">Home</RouterLink>
+        <RouterLink to="/about">About</RouterLink>
+      </div>
+    </nav>
+    <main class="container">
+      <RouterView />
+    </main>
+  </div>
+</template>
+
+<style scoped>
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: #1a1a2e;
+  color: white;
+}
+.nav-brand {
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+.nav-links a {
+  color: #ccc;
+  text-decoration: none;
+  margin-left: 1.5rem;
+}
+.nav-links a.router-link-active {
+  color: #42b883;
+}
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+</style>
+`);
+
+    // src/style.css
+    this.addFile(files, "src/style.css", `*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #213547;
+  background: #ffffff;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+`);
+
+    // src/router/index.ts
+    this.addFile(files, "src/router/index.ts", `import { createRouter, createWebHistory } from 'vue-router'
+import HomeView from '../views/HomeView.vue'
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: HomeView,
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: () => import('../views/AboutView.vue'),
+    },
+  ],
+})
+
+export default router
+`);
+
+    // src/views/HomeView.vue
+    this.addFile(files, "src/views/HomeView.vue", `<script setup lang="ts">
+import { useCounterStore } from '../stores/counter'
+
+const counter = useCounterStore()
+</script>
+
+<template>
+  <div class="home">
+    <h1>Welcome to ${svc}</h1>
+    <p>A modern Vue 3 application generated by IDP CLI.</p>
+    <div class="counter-demo">
+      <p>Counter: {{ counter.count }}</p>
+      <button @click="counter.increment()">Increment</button>
+      <button @click="counter.decrement()">Decrement</button>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.home { text-align: center; margin-top: 2rem; }
+.home h1 { font-size: 2rem; margin-bottom: 1rem; }
+.counter-demo { margin-top: 2rem; }
+button {
+  padding: 0.5rem 1.5rem;
+  margin: 0 0.5rem;
+  border: none;
+  border-radius: 6px;
+  background: #42b883;
+  color: white;
+  cursor: pointer;
+  font-size: 1rem;
+}
+button:hover { background: #33a06f; }
+</style>
+`);
+
+    // src/views/AboutView.vue
+    this.addFile(files, "src/views/AboutView.vue", `<template>
+  <div class="about">
+    <h1>About ${svc}</h1>
+    <p>This application was generated using the Internal Developer Platform CLI.</p>
+    <ul>
+      <li>Vue 3 with Composition API</li>
+      <li>TypeScript</li>
+      <li>Pinia for state management</li>
+      <li>Vue Router</li>
+      <li>Vite build tool</li>
+    </ul>
+  </div>
+</template>
+
+<style scoped>
+.about { max-width: 600px; margin: 2rem auto; }
+.about h1 { margin-bottom: 1rem; }
+.about ul { margin-top: 1rem; padding-left: 1.5rem; }
+.about li { margin-bottom: 0.5rem; }
+</style>
+`);
+
+    // src/stores/counter.ts
+    this.addFile(files, "src/stores/counter.ts", `import { defineStore } from 'pinia'
+import { ref } from 'vue'
+
+export const useCounterStore = defineStore('counter', () => {
+  const count = ref(0)
+
+  function increment() { count.value++ }
+  function decrement() { count.value-- }
+
+  return { count, increment, decrement }
+})
+`);
+
+    // src/vite-env.d.ts
+    this.addFile(files, "src/vite-env.d.ts", `/// <reference types="vite/client" />
+
+declare module '*.vue' {
+  import type { DefineComponent } from 'vue'
+  const component: DefineComponent<{}, {}, any>
+  export default component
+}
+`);
+
+    this.addFile(files, ".gitignore", `node_modules/
+dist/
+.env
+*.log
+.DS_Store
+`);
+
+    // Docker
+    if (this.config.docker) {
+      this.addFile(files, "Dockerfile", `FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+`);
+
+      this.addFile(files, "nginx.conf", `server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /assets {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+`);
+
+      this.addFile(files, ".dockerignore", `node_modules/
+dist/
+.git
+README.md
+`);
+    }
+
+    // README
+    if (this.config.docs) {
+      this.addFile(files, "README.md", `# ${svc}
+
+A modern Vue 3 application generated by IDP CLI.
+
+## Features
+
+- Vue 3 with Composition API and \`<script setup>\`
+- TypeScript
+- Pinia state management
+- Vue Router
+- Vite for fast HMR
+
+## Getting Started
+
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
+
+App available at http://localhost:${this.config.port}
+
+## Build
+
+\`\`\`bash
+npm run build
+npm run preview
+\`\`\`
+
+## Docker
+
+\`\`\`bash
+docker build -t ${svc} .
+docker run -p 80:80 ${svc}
+\`\`\`
+`);
+    }
+
+    return files;
+  }
+}
