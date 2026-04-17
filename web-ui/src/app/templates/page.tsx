@@ -54,60 +54,59 @@ export default function TemplatesPage() {
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-10 lg:px-8">
-      {/* Header */}
-      <div className="mb-4 sm:mb-10">
-        <h1 className="text-xl sm:text-3xl font-bold tracking-tight sm:text-4xl">
+    <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
+      {/* Compact Header */}
+      <div className="mb-4">
+        <h1 className="text-xl md:text-2xl font-bold tracking-tight">
           Templates
         </h1>
-        <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-muted-foreground max-w-2xl">
-          Browse all available service templates. Each template includes
-          production-ready code, tests, Docker config, and CI/CD pipelines.
+        <p className="mt-1 text-xs md:text-sm text-muted-foreground max-w-2xl">
+          Browse all available service templates with production-ready code
         </p>
       </div>
 
-      {/* Filters */}
-      <div className="mb-4 sm:mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+      {/* Compact Filters */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 flex-wrap">
           {categories.map((cat) => (
             <Button
               key={cat.id}
               variant={category === cat.id ? "default" : "outline"}
               size="sm"
               onClick={() => setCategory(cat.id)}
-              className="gap-1 sm:gap-1.5 text-xs sm:text-sm h-7 sm:h-8"
+              className="gap-1 text-xs h-7"
             >
               {cat.label}
               <Badge
                 variant={category === cat.id ? "secondary" : "outline"}
-                className="ml-1 text-[9px] sm:text-[10px] h-4 sm:h-5 min-w-4 sm:min-w-5 justify-center"
+                className="ml-1 text-[9px] h-4 min-w-4 justify-center"
               >
                 {cat.count}
               </Badge>
             </Button>
           ))}
         </div>
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="Search templates..."
+            placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 sm:pl-9 h-8 sm:h-10 text-xs sm:text-sm"
+            className="pl-8 h-8 text-xs"
           />
         </div>
       </div>
 
-      {/* Language filter pills */}
-      <div className="mb-3 sm:mb-6 flex items-center gap-1.5 sm:gap-2 flex-wrap">
-        <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground mr-1" />
+      {/* Compact Language filter pills */}
+      <div className="mb-4 flex items-center gap-2 flex-wrap">
+        <Filter className="h-3.5 w-3.5 text-muted-foreground mr-1" />
         <Button
           variant={!selectedLang ? "secondary" : "ghost"}
           size="sm"
           onClick={() => setSelectedLang(null)}
-          className="text-xs sm:text-sm h-6 sm:h-8"
+          className="text-xs h-7"
         >
-          All Languages
+          All
         </Button>
         {languages.map((lang) => (
           <Button
@@ -117,7 +116,7 @@ export default function TemplatesPage() {
             onClick={() =>
               setSelectedLang(selectedLang === lang ? null : lang)
             }
-            className="text-xs sm:text-sm h-6 sm:h-8"
+            className="text-xs h-7"
           >
             {lang}
           </Button>
@@ -126,17 +125,16 @@ export default function TemplatesPage() {
 
       {/* Results */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="text-4xl mb-4">🔍</div>
-          <h3 className="text-lg font-semibold mb-1">No templates found</h3>
-          <p className="text-sm text-muted-foreground max-w-sm">
-            Try adjusting your search or filters to find what you&apos;re
-            looking for.
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="text-3xl mb-3">🔍</div>
+          <h3 className="text-sm font-semibold mb-1">No templates found</h3>
+          <p className="text-xs text-muted-foreground max-w-sm">
+            Try adjusting your search or filters
           </p>
           <Button
             variant="outline"
             size="sm"
-            className="mt-4"
+            className="mt-3 text-xs h-8"
             onClick={() => {
               setSearch("");
               setCategory("all");
@@ -147,7 +145,7 @@ export default function TemplatesPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid gap-3 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((t) => (
             <TemplateCard key={t.id} template={t} />
           ))}
@@ -160,41 +158,41 @@ export default function TemplatesPage() {
 function TemplateCard({ template }: { template: Template }) {
   return (
     <Link href={`/create?template=${template.id}`}>
-      <Card className="group h-full cursor-pointer transition-all duration-200 hover:shadow-xl hover:border-primary/30 hover:-translate-y-1">
-        <CardHeader className="pb-1 sm:pb-4 p-2 sm:p-6">
-          <div className="flex items-center justify-between mb-1 sm:mb-2">
-            <div className="text-2xl sm:text-3xl">{React.createElement(template.icon, { className: "w-6 h-6 sm:w-8 sm:h-8" })}</div>
-            <div className="flex gap-1 sm:gap-1.5">
-              <Badge variant="secondary" className="text-[9px] sm:text-[10px] px-1 py-0.5">
+      <Card className="group h-full cursor-pointer transition-all hover:border-primary/50">
+        <CardHeader className="pb-2 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xl">{React.createElement(template.icon, { className: "w-5 h-5" })}</div>
+            <div className="flex gap-1">
+              <Badge variant="secondary" className="text-[9px] px-1 py-0">
                 {template.language}
               </Badge>
-              <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 py-0.5">
+              <Badge variant="outline" className="text-[9px] px-1 py-0">
                 {template.framework}
               </Badge>
             </div>
           </div>
-          <CardTitle className="text-sm sm:text-lg group-hover:text-primary transition-colors">
+          <CardTitle className="text-sm group-hover:text-primary transition-colors">
             {template.name}
           </CardTitle>
-          <CardDescription className="text-xs sm:text-sm leading-relaxed line-clamp-2">
+          <CardDescription className="text-xs line-clamp-2 mt-1">
             {template.description}
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-0 p-2 sm:p-6">
-          <div className="flex flex-wrap gap-1 sm:gap-1.5 mb-2 sm:mb-4">
-            {template.features.map((f) => (
+        <CardContent className="pt-0 p-3">
+          <div className="flex flex-wrap gap-1 mb-2">
+            {template.features.slice(0, 3).map((f) => (
               <Badge
                 key={f}
                 variant="outline"
-                className="text-[9px] sm:text-[10px] font-normal px-1 py-0.5"
+                className="text-[9px] font-normal px-1 py-0"
               >
                 {f}
               </Badge>
             ))}
           </div>
-          <div className="flex items-center text-xs sm:text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
             Use this template
-            <ArrowRight className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
+            <ArrowRight className="ml-1 h-3 w-3" />
           </div>
         </CardContent>
       </Card>
