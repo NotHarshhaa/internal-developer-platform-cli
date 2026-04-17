@@ -27,6 +27,9 @@ import {
   Cpu,
   HardDrive,
   Activity,
+  History,
+  Eye,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +37,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Card,
   CardContent,
@@ -43,9 +53,10 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { templates, type Template, defaultConfig, type ServiceConfig, ciProviders, deployTargets, gitOpsTools } from "@/lib/data";
+import { templates, type Template, defaultConfig, type ServiceConfig, ciProviders, deployTargets, gitOpsTools, configPresets, type ConfigPreset, type RecentService } from "@/lib/data";
 import { getTemplate } from "@/lib/generators/registry";
 import { createZip, downloadZip } from "@/lib/utils/zip";
+import { saveRecentService, getRecentServices, deleteRecentService } from "@/lib/utils/storage";
 
 const steps = [
   { id: 1, title: "Template", icon: Layers, description: "Choose a template" },
@@ -65,12 +76,17 @@ function CreateServiceContent() {
   const [nameError, setNameError] = useState("");
   const [generationOutput, setGenerationOutput] = useState("");
   const [generatedFiles, setGeneratedFiles] = useState<string[]>([]);
+  const [recentServices, setRecentServices] = useState<RecentService[]>([]);
+  const [showRecent, setShowRecent] = useState(false);
+  const [previewFiles, setPreviewFiles] = useState<{ path: string; content: string }[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     const tpl = searchParams.get("template");
     if (tpl && templates.find((t) => t.id === tpl)) {
       setConfig((c) => ({ ...c, template: tpl }));
     }
+    setRecentServices(getRecentServices());
   }, [searchParams]);
 
   const selectedTemplate = templates.find((t) => t.id === config.template);
@@ -119,6 +135,10 @@ function CreateServiceContent() {
       // Download ZIP
       downloadZip(zipBlob, `${config.name}.zip`);
       
+      // Save to recent services
+      saveRecentService(config, selectedTemplate?.name || config.template);
+      setRecentServices(getRecentServices());
+      
       setGenerated(true);
       setGenerationOutput(`Successfully generated ${files.length} files for ${config.name}`);
       toast.success("Service generated successfully!", {
@@ -135,14 +155,94 @@ function CreateServiceContent() {
     }
   };
 
+  const handlePreviewFiles = () => {
+    try {
+      const template = getTemplate(config.template, config);
+      const files = template.generateFiles();
+      setPreviewFiles(files);
+      setShowPreview(true);
+    } catch (error) {
+      toast.error("Preview failed", {
+        description: error instanceof Error ? error.message : "Failed to generate preview",
+      });
+    }
+  };
+
+  const applyPreset = (preset: ConfigPreset) => {
+    setConfig((c) => ({
+      ...c,
+      ...preset.config,
+    }));
+    toast.success("Preset applied", {
+      description: `Applied ${preset.name} configuration`,
+    });
+  };
+
+  const loadRecentService = (recent: RecentService) => {
+    setConfig(recent.config);
+    setShowRecent(false);
+    toast.success("Configuration loaded", {
+      description: `Loaded ${recent.config.name} configuration`,
+    });
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
       {/* Compact Header */}
-      <div className="mb-4">
-        <h1 className="text-xl md:text-2xl font-bold tracking-tight">Create a Service</h1>
-        <p className="mt-1 text-xs md:text-sm text-muted-foreground">
-          Configure your service and download the generated code as a ZIP file
-        </p>
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight">Create a Service</h1>
+          <p className="mt-1 text-xs md:text-sm text-muted-foreground">
+            Configure your service and download the generated code as a ZIP file
+          </p>
+        </div>
+        {recentServices.length > 0 && (
+          <div className="relative">
+            <Button variant="outline" size="sm" onClick={() => setShowRecent(!showRecent)} className="gap-1.5">
+              <History className="h-4 w-4" />
+              <span className="hidden sm:inline">Recent</span>
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
+                {recentServices.length}
+              </Badge>
+            </Button>
+            {showRecent && (
+              <Card className="absolute right-0 top-full z-50 mt-2 w-72 shadow-lg">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Recent Services</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="max-h-64 overflow-y-auto">
+                    {recentServices.map((recent) => (
+                      <div
+                        key={recent.id}
+                        className="flex items-center justify-between border-b px-3 py-2 last:border-0 hover:bg-muted/50 transition-colors"
+                      >
+                        <button
+                          onClick={() => loadRecentService(recent)}
+                          className="flex-1 text-left"
+                        >
+                          <p className="text-sm font-medium">{recent.config.name}</p>
+                          <p className="text-[10px] text-muted-foreground">{recent.templateName}</p>
+                        </button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            deleteRecentService(recent.id);
+                            setRecentServices(getRecentServices());
+                          }}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Compact Stepper */}
@@ -208,6 +308,7 @@ function CreateServiceContent() {
             nameError={nameError}
             setNameError={setNameError}
             validateName={validateName}
+            applyPreset={applyPreset}
           />
         )}
         {step === 3 && (
@@ -219,6 +320,7 @@ function CreateServiceContent() {
             onGenerate={handleGenerate}
             generationOutput={generationOutput}
             generatedFiles={generatedFiles}
+            onPreview={handlePreviewFiles}
           />
         )}
       </div>
@@ -271,6 +373,31 @@ function CreateServiceContent() {
           </Button>
         )}
       </div>
+
+      {/* File Preview Dialog */}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Preview Generated Files</DialogTitle>
+            <DialogDescription>
+              Review the files that will be generated for {config.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 overflow-y-auto max-h-[60vh] space-y-2">
+            {previewFiles.map((file, idx) => (
+              <div key={idx} className="border rounded-lg">
+                <div className="bg-muted px-3 py-2 border-b flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-mono">{file.path}</span>
+                </div>
+                <pre className="p-3 text-xs font-mono overflow-x-auto bg-neutral-950 text-green-400 max-h-48 overflow-y-auto">
+                  {file.content}
+                </pre>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -371,12 +498,14 @@ function StepConfigure({
   nameError,
   setNameError,
   validateName,
+  applyPreset,
 }: {
   config: ServiceConfig;
   setConfig: (c: ServiceConfig) => void;
   nameError: string;
   setNameError: (e: string) => void;
   validateName: (n: string) => string;
+  applyPreset: (preset: ConfigPreset) => void;
 }) {
   const selectedTemplate = templates.find((t) => t.id === config.template);
 
@@ -405,6 +534,30 @@ function StepConfigure({
               Lowercase letters, numbers, and hyphens. Must start with a letter.
             </p>
           )}
+        </div>
+
+        {/* Configuration Presets */}
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold flex items-center gap-1.5">
+            <Sparkles className="h-3 w-3" />
+            Quick Presets
+          </Label>
+          <div className="grid grid-cols-3 gap-2">
+            {configPresets.map((preset) => (
+              <Button
+                key={preset.id}
+                variant="outline"
+                size="sm"
+                onClick={() => applyPreset(preset)}
+                className="flex flex-col items-center gap-1 h-auto py-2.5"
+              >
+                <span className="text-xs font-medium">{preset.name}</span>
+                <span className="text-[9px] text-muted-foreground text-center leading-tight">
+                  {preset.description}
+                </span>
+              </Button>
+            ))}
+          </div>
         </div>
 
         <Separator />
@@ -811,6 +964,7 @@ function StepGenerate({
   onGenerate,
   generationOutput,
   generatedFiles,
+  onPreview,
 }: {
   config: ServiceConfig;
   template: { id: string; name: string; icon: string; language: string; framework: string; features: string[] };
@@ -819,9 +973,22 @@ function StepGenerate({
   onGenerate: () => void;
   generationOutput: string;
   generatedFiles: string[];
+  onPreview: () => void;
 }) {
   return (
     <div className="space-y-4">
+      {/* Preview Button */}
+      {!generated && (
+        <Button
+          variant="outline"
+          onClick={onPreview}
+          className="w-full gap-2"
+        >
+          <Eye className="h-4 w-4" />
+          Preview Generated Files
+        </Button>
+      )}
+
       {/* Compact Review summary */}
       <Card>
         <CardHeader className="p-3">

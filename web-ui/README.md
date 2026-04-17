@@ -12,6 +12,11 @@ A modern web interface for the Internal Developer Platform CLI, providing a beau
 - **ZIP Download**: Download generated code as a ready-to-use ZIP file
 - **Real-time Preview**: See your configuration changes instantly
 
+### 🚀 New Features
+- **Recent Services History**: Track and quickly regenerate your previous services
+- **Configuration Presets**: Quick-start with pre-configured setups (Minimal, Production, Development)
+- **File Preview**: Preview all generated files before downloading
+
 ### 🏥 Operational Observability (NEW)
 - **Health Monitoring**: Real-time service health status and alerts
 - **Dependency Visualization**: Interactive service relationship maps

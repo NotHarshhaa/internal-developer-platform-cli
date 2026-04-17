@@ -257,6 +257,20 @@ export type ServiceConfig = {
   dependencies: string[];
 };
 
+export type RecentService = {
+  id: string;
+  config: ServiceConfig;
+  generatedAt: string;
+  templateName: string;
+};
+
+export type ConfigPreset = {
+  id: string;
+  name: string;
+  description: string;
+  config: Partial<ServiceConfig>;
+};
+
 export const defaultConfig: ServiceConfig = {
   name: "",
   template: "",
@@ -280,3 +294,66 @@ export const defaultConfig: ServiceConfig = {
   healthCheck: true,
   dependencies: [],
 };
+
+export const configPresets: ConfigPreset[] = [
+  {
+    id: "minimal",
+    name: "Minimal",
+    description: "Basic service with only essential features",
+    config: {
+      ci: "github-actions",
+      deploy: "kubernetes",
+      gitops: "none",
+      docker: true,
+      k8s: true,
+      monitoring: false,
+      docs: false,
+      healthCheck: false,
+      replicas: 1,
+    },
+  },
+  {
+    id: "production",
+    name: "Production Ready",
+    description: "Full-featured service for production",
+    config: {
+      ci: "github-actions",
+      deploy: "kubernetes",
+      gitops: "argocd",
+      docker: true,
+      k8s: true,
+      monitoring: true,
+      docs: true,
+      healthCheck: true,
+      replicas: 3,
+      resources: {
+        cpuRequest: "200m",
+        cpuLimit: "1000m",
+        memoryRequest: "256Mi",
+        memoryLimit: "1Gi",
+      },
+    },
+  },
+  {
+    id: "dev",
+    name: "Development",
+    description: "Simple setup for local development",
+    config: {
+      ci: "github-actions",
+      deploy: "docker",
+      gitops: "none",
+      docker: true,
+      k8s: false,
+      monitoring: false,
+      docs: true,
+      healthCheck: false,
+      replicas: 1,
+      resources: {
+        cpuRequest: "100m",
+        cpuLimit: "500m",
+        memoryRequest: "128Mi",
+        memoryLimit: "256Mi",
+      },
+    },
+  },
+];
