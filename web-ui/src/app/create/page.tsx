@@ -309,7 +309,12 @@ function CreateServiceContent() {
       {/* Compact Header */}
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight">Create a Service</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Create a Service</h1>
+            <Badge variant="outline" className="text-[9px] px-2 py-0.5">
+              v1.5.0
+            </Badge>
+          </div>
           <p className="mt-1 text-xs md:text-sm text-muted-foreground">
             Configure your service and download the generated code as a ZIP file
           </p>
@@ -480,7 +485,7 @@ function CreateServiceContent() {
         {step === 1 && (
           <StepTemplate
             selected={config.template}
-            onSelect={(id) => setConfig({ ...config, template: id })}
+            onSelect={(id) => setConfig({ ...config, template: config.template === id ? "" : id })}
           />
         )}
         {step === 2 && (

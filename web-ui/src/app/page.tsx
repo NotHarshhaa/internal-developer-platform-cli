@@ -119,7 +119,7 @@ export default function Home() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="flex-1">
               <Badge className="mb-3 px-2 py-0.5 text-[10px] font-medium">
-                v1.0.0 Production Ready
+                v1.5.0 Production Ready
               </Badge>
               <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold tracking-tight">
                 Internal Developer

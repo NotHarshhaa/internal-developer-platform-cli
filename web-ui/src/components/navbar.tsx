@@ -74,7 +74,7 @@ export function Navbar() {
           <Badge className="flex items-center gap-1 px-1.5 py-0.5">
             <span className="h-1.5 w-1.5 rounded-full bg-background animate-pulse" />
             <span className="text-[9px] font-medium">
-              v1.0.0
+              v1.5.0
             </span>
           </Badge>
           <ThemeToggle />
