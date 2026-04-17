@@ -43,19 +43,14 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import {
-  templates,
-  ciProviders,
-  deployTargets,
-  gitOpsTools,
-  type ServiceConfig,
-  defaultConfig,
-} from "@/lib/data";
+import { templates, type Template, defaultConfig, type ServiceConfig, ciProviders, deployTargets, gitOpsTools } from "@/lib/data";
+import { getTemplate } from "@/lib/generators/registry";
+import { createZip, downloadZip } from "@/lib/utils/zip";
 
 const steps = [
   { id: 1, title: "Template", icon: Layers, description: "Choose a template" },
   { id: 2, title: "Configure", icon: Settings, description: "Service settings" },
-  { id: 3, title: "Generate", icon: Rocket, description: "Review & generate" },
+  { id: 3, title: "Generate", icon: Rocket, description: "Review & download" },
 ];
 
 function CreateServiceContent() {
@@ -111,26 +106,26 @@ function CreateServiceContent() {
     setGeneratedFiles([]);
     
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
-      });
-      const data = await res.json();
+      // Get the template generator
+      const template = getTemplate(config.template, config);
       
-      if (data.success) {
-        setGenerated(true);
-        setGenerationOutput(data.output || "");
-        setGeneratedFiles(data.files || []);
-        toast.success("Service generated successfully!", {
-          description: `${config.name} has been created with the ${selectedTemplate?.name} template.`,
-        });
-      } else {
-        toast.error("Generation failed", { description: data.error });
-        setGenerationOutput(data.error || "Unknown error occurred");
-      }
+      // Generate files
+      const files = template.generateFiles();
+      setGeneratedFiles(files.map(f => f.path));
+      
+      // Create ZIP
+      const zipBlob = await createZip(files, config.name);
+      
+      // Download ZIP
+      downloadZip(zipBlob, `${config.name}.zip`);
+      
+      setGenerated(true);
+      setGenerationOutput(`Successfully generated ${files.length} files for ${config.name}`);
+      toast.success("Service generated successfully!", {
+        description: `Downloaded ${config.name}.zip with ${files.length} files.`,
+      });
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : "Could not connect to the server. Make sure the API is running.";
+      const errorMsg = error instanceof Error ? error.message : "Failed to generate service";
       toast.error("Generation failed", {
         description: errorMsg,
       });
@@ -140,15 +135,13 @@ function CreateServiceContent() {
     }
   };
 
-  const cliCommand = buildCliCommand(config);
-
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
       {/* Compact Header */}
       <div className="mb-4">
         <h1 className="text-xl md:text-2xl font-bold tracking-tight">Create a Service</h1>
         <p className="mt-1 text-xs md:text-sm text-muted-foreground">
-          Generate a production-ready service in three steps
+          Configure your service and download the generated code as a ZIP file
         </p>
       </div>
 
@@ -221,7 +214,6 @@ function CreateServiceContent() {
           <StepGenerate
             config={config}
             template={selectedTemplate!}
-            cliCommand={cliCommand}
             generating={generating}
             generated={generated}
             onGenerate={handleGenerate}
@@ -267,15 +259,15 @@ function CreateServiceContent() {
               </>
             ) : (
               <>
-                <Rocket className="h-3 w-3" />
-                <span className="hidden sm:inline">Generate</span>
+                <Download className="h-3 w-3" />
+                <span className="hidden sm:inline">Download</span>
               </>
             )}
           </Button>
         ) : (
           <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8" disabled>
             <CheckCircle2 className="h-3 w-3" />
-            <span className="hidden sm:inline">Generated!</span>
+            <span className="hidden sm:inline">Downloaded!</span>
           </Button>
         )}
       </div>
@@ -814,7 +806,6 @@ function StepConfigure({
 function StepGenerate({
   config,
   template,
-  cliCommand,
   generating,
   generated,
   onGenerate,
@@ -823,24 +814,18 @@ function StepGenerate({
 }: {
   config: ServiceConfig;
   template: { id: string; name: string; icon: string; language: string; framework: string; features: string[] };
-  cliCommand: string;
   generating: boolean;
   generated: boolean;
   onGenerate: () => void;
   generationOutput: string;
   generatedFiles: string[];
 }) {
-  const copyCommand = () => {
-    navigator.clipboard.writeText(cliCommand);
-    toast.success("Copied to clipboard!");
-  };
-
   return (
     <div className="space-y-4">
       {/* Compact Review summary */}
       <Card>
         <CardHeader className="p-3">
-          <CardTitle className="text-sm">Service Configuration Review</CardTitle>
+          <CardTitle className="text-sm">Configuration Review</CardTitle>
           <CardDescription className="text-xs">
             Review your settings before generating
           </CardDescription>
@@ -898,28 +883,6 @@ function StepGenerate({
         </CardContent>
       </Card>
 
-      {/* CLI Command */}
-      <Card>
-        <CardHeader className="pb-1.5 p-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xs flex items-center gap-1.5">
-              <Terminal className="h-3 w-3" />
-              CLI Command
-            </CardTitle>
-            <Button variant="ghost" size="sm" onClick={copyCommand} className="gap-1 h-6 text-[10px]">
-              <Copy className="h-2.5 w-2.5" />
-              <span className="hidden sm:inline">Copy</span>
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-2">
-          <div className="relative rounded-lg bg-neutral-950 p-2 font-mono text-[10px] text-green-400 overflow-x-auto">
-            <span className="text-neutral-500">$ </span>
-            {cliCommand}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Generation Output */}
       {(generating || generationOutput) && (
         <Card>
@@ -934,7 +897,7 @@ function StepGenerate({
               {generating ? (
                 <div className="flex items-center gap-1.5">
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  <span>Generating...</span>
+                  <span>Generating files...</span>
                 </div>
               ) : (
                 <pre className="whitespace-pre-wrap">{generationOutput}</pre>
@@ -950,17 +913,22 @@ function StepGenerate({
           <CardHeader className="pb-2 p-2">
             <CardTitle className="text-xs flex items-center gap-1.5">
               <FolderOpen className="h-3.5 w-3.5" />
-              Files ({generatedFiles.length})
+              Generated Files ({generatedFiles.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2">
             <div className="space-y-0.5 max-h-48 overflow-y-auto">
-              {generatedFiles.map((file, idx) => (
+              {generatedFiles.slice(0, 50).map((file, idx) => (
                 <div key={idx} className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors">
                   <FileText className="h-2.5 w-2.5" />
                   {file}
                 </div>
               ))}
+              {generatedFiles.length > 50 && (
+                <p className="text-[9px] text-muted-foreground mt-2">
+                  ... and {generatedFiles.length - 50} more files
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -977,11 +945,10 @@ function StepGenerate({
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-green-600 dark:text-green-400">
-                    Service generated successfully!
+                    Service Generated Successfully!
                   </p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Your service <code className="font-mono bg-muted px-1 rounded">{config.name}</code> has
-                    been created in <code className="font-mono bg-muted px-1 rounded">{config.outputDir}</code>
+                    Downloaded <code className="font-mono bg-muted px-1 rounded">{config.name}.zip</code> with {generatedFiles.length} files
                   </p>
                 </div>
               </div>
@@ -991,35 +958,11 @@ function StepGenerate({
               <div>
                 <p className="text-xs font-semibold mb-1.5">Next Steps:</p>
                 <ol className="text-[10px] text-muted-foreground space-y-1 list-decimal list-inside">
-                  <li>Navigate to the output directory: <code className="font-mono bg-muted px-1 rounded text-[9px]">{config.outputDir}/{config.name}</code></li>
+                  <li>Extract the downloaded ZIP file</li>
+                  <li>Navigate to the extracted directory</li>
                   <li>Install dependencies (check README.md for instructions)</li>
-                  {config.docker && <li>Build Docker image: <code className="font-mono bg-muted px-1 rounded text-[9px]">docker build -t {config.name} .</code></li>}
-                  {config.k8s && (config.port !== 8080 || config.replicas !== 2 || config.envVars.length > 0) && (
-                    <li className="text-amber-600 dark:text-amber-400">
-                      <strong>Manual Configuration Required:</strong> Update the generated Kubernetes manifests with your custom settings:
-                      {config.port !== 8080 && ` port: ${config.port}`}
-                      {config.replicas !== 2 && `, replicas: ${config.replicas}`}
-                      {config.envVars.length > 0 && `, ${config.envVars.length} environment variable(s)`}
-                      {(config.resources.cpuRequest !== "100m" || config.resources.memoryRequest !== "128Mi") && `, resource limits`}
-                    </li>
-                  )}
-                  {config.k8s && <li>Deploy to Kubernetes: <code className="font-mono bg-muted px-1 rounded text-[9px]">kubectl apply -k k8s/overlays/dev</code></li>}
-                  <li>Review and customize the generated configuration files</li>
-                  {config.ci !== "none" && <li>Push to your Git repository to trigger CI/CD pipeline</li>}
+                  <li>Run the service locally</li>
                 </ol>
-              </div>
-              
-              <div className="flex gap-1.5 pt-1 flex-wrap">
-                <Button variant="outline" size="sm" className="gap-1.5 text-[10px] h-7" onClick={() => window.location.href = "/create"}>
-                  <Rocket className="h-3 w-3" />
-                  <span className="hidden sm:inline">Create Another</span>
-                  <span className="sm:hidden">New</span>
-                </Button>
-                <Button variant="outline" size="sm" className="gap-1.5 text-[10px] h-7" onClick={() => window.location.href = "/"}>
-                  <ArrowLeft className="h-3 w-3" />
-                  <span className="hidden sm:inline">Back to Home</span>
-                  <span className="sm:hidden">Home</span>
-                </Button>
               </div>
             </div>
           </CardContent>
@@ -1062,17 +1005,4 @@ function FeatureCheck({ label, enabled }: { label: string; enabled: boolean }) {
       <span className={cn(!enabled && "text-muted-foreground/50")}>{label}</span>
     </div>
   );
-}
-
-function buildCliCommand(config: ServiceConfig): string {
-  const parts = [`idp-cli create-service ${config.name || "<service-name>"}`];
-  parts.push(`--template ${config.template || "<template>"}`);
-  if (config.ci !== "github-actions") parts.push(`--ci ${config.ci}`);
-  if (config.deploy !== "kubernetes") parts.push(`--deploy ${config.deploy}`);
-  if (config.gitops !== "none") parts.push(`--gitops ${config.gitops}`);
-  if (!config.docker) parts.push("--no-docker");
-  if (!config.k8s) parts.push("--no-k8s");
-  if (!config.monitoring) parts.push("--no-monitoring");
-  if (!config.docs) parts.push("--no-docs");
-  return parts.join(" \\\n  ");
 }

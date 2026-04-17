@@ -7,8 +7,9 @@ A modern web interface for the Internal Developer Platform CLI, providing a beau
 ## ✨ Features
 
 ### 🎯 Service Management
-- **Service Creation**: Intuitive wizard for creating production-ready services
-- **Template Browser**: Explore 11 battle-tested service templates
+- **Service Generation**: Generate production-ready services entirely in the browser
+- **Template Browser**: Explore battle-tested service templates
+- **ZIP Download**: Download generated code as a ready-to-use ZIP file
 - **Real-time Preview**: See your configuration changes instantly
 
 ### 🏥 Operational Observability (NEW)
