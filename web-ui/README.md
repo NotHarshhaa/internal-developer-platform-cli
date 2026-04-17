@@ -16,6 +16,10 @@ A modern web interface for the Internal Developer Platform CLI, providing a beau
 - **Recent Services History**: Track and quickly regenerate your previous services
 - **Configuration Presets**: Quick-start with pre-configured setups (Minimal, Production, Development)
 - **File Preview**: Preview all generated files before downloading
+- **Export/Import Config**: Save and load configurations as JSON files
+- **Copy Configuration**: Quick copy config to clipboard for sharing
+- **Service Name Suggestions**: Smart name suggestions based on selected template
+- **Keyboard Shortcuts**: Power user shortcuts (Ctrl+K for shortcuts, Ctrl+Enter to continue)
 
 ### 🏥 Operational Observability (NEW)
 - **Health Monitoring**: Real-time service health status and alerts

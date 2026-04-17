@@ -42,3 +42,22 @@ export function deleteRecentService(id: string): void {
   const filtered = recentServices.filter(s => s.id !== id);
   localStorage.setItem(RECENT_SERVICES_KEY, JSON.stringify(filtered));
 }
+
+export function exportConfig(config: ServiceConfig): string {
+  return JSON.stringify(config, null, 2);
+}
+
+export function importConfig(jsonString: string): ServiceConfig | null {
+  try {
+    return JSON.parse(jsonString);
+  } catch {
+    return null;
+  }
+}
+
+export function copyToClipboard(text: string): Promise<boolean> {
+  if (typeof window === "undefined") return Promise.resolve(false);
+  return navigator.clipboard.writeText(text)
+    .then(() => true)
+    .catch(() => false);
+}

@@ -30,6 +30,10 @@ import {
   History,
   Eye,
   Sparkles,
+  UploadCloud,
+  Keyboard as Kbd,
+  Lightbulb,
+  MoreHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +60,8 @@ import { cn } from "@/lib/utils";
 import { templates, type Template, defaultConfig, type ServiceConfig, ciProviders, deployTargets, gitOpsTools, configPresets, type ConfigPreset, type RecentService } from "@/lib/data";
 import { getTemplate } from "@/lib/generators/registry";
 import { createZip, downloadZip } from "@/lib/utils/zip";
-import { saveRecentService, getRecentServices, deleteRecentService } from "@/lib/utils/storage";
+import { saveRecentService, getRecentServices, deleteRecentService, exportConfig, importConfig, copyToClipboard } from "@/lib/utils/storage";
+import { generateServiceNameSuggestions } from "@/lib/utils/names";
 
 const steps = [
   { id: 1, title: "Template", icon: Layers, description: "Choose a template" },
@@ -80,6 +85,12 @@ function CreateServiceContent() {
   const [showRecent, setShowRecent] = useState(false);
   const [previewFiles, setPreviewFiles] = useState<{ path: string; content: string }[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const recentRef = React.useRef<HTMLDivElement>(null);
+  const actionsRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const tpl = searchParams.get("template");
@@ -88,6 +99,21 @@ function CreateServiceContent() {
     }
     setRecentServices(getRecentServices());
   }, [searchParams]);
+
+  // Click outside to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (recentRef.current && !recentRef.current.contains(event.target as Node)) {
+        setShowRecent(false);
+      }
+      if (actionsRef.current && !actionsRef.current.contains(event.target as Node)) {
+        setShowActionsMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const selectedTemplate = templates.find((t) => t.id === config.template);
 
@@ -101,7 +127,7 @@ function CreateServiceContent() {
 
   const canProceed = () => {
     if (step === 1) return !!config.template;
-    if (step === 2) return !!config.name && !validateName(config.name);
+    if (step === 2) return !!config.name && !nameError;
     return true;
   };
 
@@ -181,10 +207,102 @@ function CreateServiceContent() {
   const loadRecentService = (recent: RecentService) => {
     setConfig(recent.config);
     setShowRecent(false);
+    setShowActionsMenu(false);
     toast.success("Configuration loaded", {
       description: `Loaded ${recent.config.name} configuration`,
     });
   };
+
+  const handleExportConfig = () => {
+    const json = exportConfig(config);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${config.name || "service"}-config.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Configuration exported", {
+      description: "Downloaded configuration as JSON",
+    });
+  };
+
+  const handleImportConfig = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      const importedConfig = importConfig(content);
+      if (importedConfig) {
+        setConfig(importedConfig);
+        toast.success("Configuration imported", {
+          description: "Loaded configuration from file",
+        });
+      } else {
+        toast.error("Import failed", {
+          description: "Invalid configuration file",
+        });
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
+  };
+
+  const handleCopyConfig = async () => {
+    const json = exportConfig(config);
+    const success = await copyToClipboard(json);
+    if (success) {
+      toast.success("Configuration copied", {
+        description: "Copied to clipboard",
+      });
+    } else {
+      toast.error("Copy failed", {
+        description: "Could not copy to clipboard",
+      });
+    }
+  };
+
+  const handleGenerateSuggestions = () => {
+    const suggestions = generateServiceNameSuggestions(config.template);
+    setNameSuggestions(suggestions);
+    setShowSuggestions(true);
+  };
+
+  const handleSelectSuggestion = (name: string) => {
+    setConfig({ ...config, name });
+    setShowSuggestions(false);
+    setNameError("");
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === "k") {
+          e.preventDefault();
+          setShowKeyboardShortcuts(!showKeyboardShortcuts);
+        }
+        if (e.key === "Enter" && step < 3 && canProceed()) {
+          e.preventDefault();
+          handleNext();
+        }
+      }
+      if (e.key === "Escape") {
+        setShowRecent(false);
+        setShowPreview(false);
+        setShowSuggestions(false);
+        setShowKeyboardShortcuts(false);
+        setShowActionsMenu(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [step, showKeyboardShortcuts, config]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
@@ -196,53 +314,117 @@ function CreateServiceContent() {
             Configure your service and download the generated code as a ZIP file
           </p>
         </div>
-        {recentServices.length > 0 && (
-          <div className="relative">
-            <Button variant="outline" size="sm" onClick={() => setShowRecent(!showRecent)} className="gap-1.5">
-              <History className="h-4 w-4" />
-              <span className="hidden sm:inline">Recent</span>
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
-                {recentServices.length}
-              </Badge>
+        <div className="flex items-center gap-2">
+          {recentServices.length > 0 && (
+            <div className="relative" ref={recentRef}>
+              <Button variant="outline" size="sm" onClick={() => {
+                setShowRecent(!showRecent);
+                setShowActionsMenu(false);
+              }} className="gap-1.5 h-8 text-xs">
+                <History className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Recent</span>
+                <Badge variant="secondary" className="ml-1 h-4 px-1 text-[9px]">
+                  {recentServices.length}
+                </Badge>
+              </Button>
+              {showRecent && (
+                <Card className="absolute right-0 top-full z-50 mt-2 w-72 shadow-lg">
+                  <CardHeader className="pb-2 px-3">
+                    <CardTitle className="text-xs">Recent Services</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="max-h-64 overflow-y-auto">
+                      {recentServices.map((recent) => (
+                        <div
+                          key={recent.id}
+                          className="flex items-center justify-between border-b px-3 py-2 last:border-0 hover:bg-muted/50 transition-colors"
+                        >
+                          <button
+                            onClick={() => loadRecentService(recent)}
+                            className="flex-1 text-left"
+                          >
+                            <p className="text-xs font-medium">{recent.config.name}</p>
+                            <p className="text-[9px] text-muted-foreground">{recent.templateName}</p>
+                          </button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteRecentService(recent.id);
+                              setRecentServices(getRecentServices());
+                            }}
+                            className="h-5 w-5 p-0"
+                          >
+                            <Trash2 className="h-2.5 w-2.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+          <div className="relative" ref={actionsRef}>
+            <Button variant="ghost" size="sm" onClick={() => {
+              setShowActionsMenu(!showActionsMenu);
+              setShowRecent(false);
+            }} className="h-8 w-8 p-0">
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
-            {showRecent && (
-              <Card className="absolute right-0 top-full z-50 mt-2 w-72 shadow-lg">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Recent Services</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="max-h-64 overflow-y-auto">
-                    {recentServices.map((recent) => (
-                      <div
-                        key={recent.id}
-                        className="flex items-center justify-between border-b px-3 py-2 last:border-0 hover:bg-muted/50 transition-colors"
-                      >
-                        <button
-                          onClick={() => loadRecentService(recent)}
-                          className="flex-1 text-left"
-                        >
-                          <p className="text-sm font-medium">{recent.config.name}</p>
-                          <p className="text-[10px] text-muted-foreground">{recent.templateName}</p>
-                        </button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            deleteRecentService(recent.id);
-                            setRecentServices(getRecentServices());
-                          }}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+            {showActionsMenu && (
+              <Card className="absolute right-0 top-full z-50 mt-2 w-48 shadow-lg">
+                <CardContent className="p-1">
+                  <button
+                    onClick={() => {
+                      handleCopyConfig();
+                      setShowActionsMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted rounded transition-colors text-left"
+                  >
+                    <Copy className="h-3 w-3" />
+                    Copy Config
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleExportConfig();
+                      setShowActionsMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted rounded transition-colors text-left"
+                  >
+                    <Download className="h-3 w-3" />
+                    Export Config
+                  </button>
+                  <label className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted rounded transition-colors cursor-pointer">
+                    <UploadCloud className="h-3 w-3" />
+                    Import Config
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={(e) => {
+                        handleImportConfig(e);
+                        setShowActionsMenu(false);
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  <Separator className="my-1" />
+                  <button
+                    onClick={() => {
+                      setShowKeyboardShortcuts(true);
+                      setShowActionsMenu(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted rounded transition-colors text-left"
+                  >
+                    <Kbd className="h-3 w-3" />
+                    Keyboard Shortcuts
+                  </button>
                 </CardContent>
               </Card>
             )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Compact Stepper */}
@@ -309,6 +491,10 @@ function CreateServiceContent() {
             setNameError={setNameError}
             validateName={validateName}
             applyPreset={applyPreset}
+            onGenerateSuggestions={handleGenerateSuggestions}
+            showSuggestions={showSuggestions}
+            nameSuggestions={nameSuggestions}
+            onSelectSuggestion={handleSelectSuggestion}
           />
         )}
         {step === 3 && (
@@ -395,6 +581,32 @@ function CreateServiceContent() {
                 </pre>
               </div>
             ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Keyboard Shortcuts Dialog */}
+      <Dialog open={showKeyboardShortcuts} onOpenChange={setShowKeyboardShortcuts}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Keyboard Shortcuts</DialogTitle>
+            <DialogDescription>
+              Power user shortcuts to navigate faster
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-4">
+            <div className="flex items-center justify-between text-sm">
+              <span>Continue to next step</span>
+              <kbd className="px-2 py-1 bg-muted rounded text-xs">Ctrl + Enter</kbd>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span>Show keyboard shortcuts</span>
+              <kbd className="px-2 py-1 bg-muted rounded text-xs">Ctrl + K</kbd>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span>Close dialogs/popups</span>
+              <kbd className="px-2 py-1 bg-muted rounded text-xs">Escape</kbd>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -499,6 +711,10 @@ function StepConfigure({
   setNameError,
   validateName,
   applyPreset,
+  onGenerateSuggestions,
+  showSuggestions,
+  nameSuggestions,
+  onSelectSuggestion,
 }: {
   config: ServiceConfig;
   setConfig: (c: ServiceConfig) => void;
@@ -506,6 +722,10 @@ function StepConfigure({
   setNameError: (e: string) => void;
   validateName: (n: string) => string;
   applyPreset: (preset: ConfigPreset) => void;
+  onGenerateSuggestions: () => void;
+  showSuggestions: boolean;
+  nameSuggestions: string[];
+  onSelectSuggestion: (name: string) => void;
 }) {
   const selectedTemplate = templates.find((t) => t.id === config.template);
 
@@ -514,19 +734,48 @@ function StepConfigure({
       <div className="space-y-4">
         {/* Service Name */}
         <div className="space-y-2">
-          <Label htmlFor="name" className="text-xs font-semibold">
+          <Label htmlFor="name" className="text-xs font-semibold flex items-center justify-between">
             Service Name
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onGenerateSuggestions}
+              className="h-6 text-[10px] gap-1"
+            >
+              <Lightbulb className="h-3 w-3" />
+              Suggest
+            </Button>
           </Label>
-          <Input
-            id="name"
-            placeholder="my-awesome-service"
-            value={config.name}
-            onChange={(e) => {
-              setConfig({ ...config, name: e.target.value });
-              if (nameError) setNameError(validateName(e.target.value));
-            }}
-            className={cn("h-9 text-sm", nameError && "border-destructive")}
-          />
+          <div className="relative">
+            <Input
+              id="name"
+              placeholder="my-awesome-service"
+              value={config.name}
+              onChange={(e) => {
+                setConfig({ ...config, name: e.target.value });
+                if (nameError) setNameError(validateName(e.target.value));
+              }}
+              className={cn("h-9 text-sm", nameError && "border-destructive")}
+            />
+            {showSuggestions && (
+              <Card className="absolute top-full left-0 right-0 z-50 mt-1 shadow-lg">
+                <CardContent className="p-2">
+                  <p className="text-[10px] text-muted-foreground mb-2">Click to use a suggestion:</p>
+                  <div className="space-y-1">
+                    {nameSuggestions.map((suggestion, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => onSelectSuggestion(suggestion)}
+                        className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-muted transition-colors"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
           {nameError ? (
             <p className="text-[10px] text-destructive">{nameError}</p>
           ) : (

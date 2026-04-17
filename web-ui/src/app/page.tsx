@@ -13,6 +13,12 @@ import {
   Smartphone,
   Eye,
   Shield,
+  History,
+  Copy,
+  Lightbulb,
+  Keyboard,
+  Download,
+  UploadCloud,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,6 +75,39 @@ const quickActions = [
   { icon: Heart, label: "Health Monitor", href: "#" },
   { icon: Network, label: "Dependencies", href: "#" },
   { icon: CheckCircle, label: "Environment Check", href: "#" },
+];
+
+const newFeatures = [
+  {
+    icon: History,
+    title: "Recent History",
+    description: "Track and quickly regenerate previous services",
+  },
+  {
+    icon: Lightbulb,
+    title: "Smart Suggestions",
+    description: "AI-powered service name suggestions",
+  },
+  {
+    icon: Copy,
+    title: "Config Sharing",
+    description: "Copy or export configurations for team sharing",
+  },
+  {
+    icon: UploadCloud,
+    title: "Import Configs",
+    description: "Load saved configurations from JSON files",
+  },
+  {
+    icon: Download,
+    title: "Quick Presets",
+    description: "Pre-configured setups for common scenarios",
+  },
+  {
+    icon: Keyboard,
+    title: "Keyboard Shortcuts",
+    description: "Power user shortcuts for faster navigation",
+  },
 ];
 
 export default function Home() {
@@ -189,6 +228,33 @@ export default function Home() {
                   </div>
                   <h4 className="font-semibold text-xs mb-1">{feature.label}</h4>
                   <p className="text-[10px] text-muted-foreground">{feature.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* New Features Section */}
+      <section className="py-6 md:py-8 bg-muted/30">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="mb-4 flex items-center gap-2">
+            <Badge className="px-1.5 py-0 text-[9px] font-medium bg-primary/10 text-primary">
+              NEW
+            </Badge>
+            <h2 className="text-lg md:text-xl font-bold tracking-tight">
+              Developer-First Features
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+            {newFeatures.map((feature) => (
+              <Card key={feature.title} className="hover:border-primary/50 transition-colors">
+                <CardContent className="p-3 text-center">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary mx-auto mb-2">
+                    <feature.icon className="h-4 w-4" />
+                  </div>
+                  <h4 className="font-semibold text-xs mb-1">{feature.title}</h4>
+                  <p className="text-[10px] text-muted-foreground leading-tight">{feature.description}</p>
                 </CardContent>
               </Card>
             ))}
