@@ -312,7 +312,7 @@ function CreateServiceContent() {
           <div className="flex items-center gap-3">
             <h1 className="text-xl md:text-2xl font-bold tracking-tight">Create a Service</h1>
             <Badge variant="outline" className="text-[9px] px-2 py-0.5">
-              v1.5.0
+              v2.0.0
             </Badge>
           </div>
           <p className="mt-1 text-xs md:text-sm text-muted-foreground">
@@ -505,7 +505,7 @@ function CreateServiceContent() {
         {step === 3 && (
           <StepGenerate
             config={config}
-            template={selectedTemplate!}
+            template={selectedTemplate}
             generating={generating}
             generated={generated}
             onGenerate={handleGenerate}
@@ -1221,7 +1221,7 @@ function StepGenerate({
   onPreview,
 }: {
   config: ServiceConfig;
-  template: { id: string; name: string; icon: string; language: string; framework: string; features: string[] };
+  template?: Template;
   generating: boolean;
   generated: boolean;
   onGenerate: () => void;
@@ -1255,11 +1255,15 @@ function StepGenerate({
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                {React.createElement(template.icon, { className: "h-5 w-5" })}
+                {template?.icon ? (
+                  React.createElement(template.icon, { className: "h-5 w-5 text-primary" })
+                ) : (
+                  <Rocket className="h-5 w-5 text-primary" />
+                )}
                 <div>
-                  <p className="font-semibold text-sm">{config.name}</p>
+                  <p className="font-semibold text-sm">{config.name || "Unnamed Service"}</p>
                   <p className="text-xs text-muted-foreground">
-                    {template.name} • {template.language}
+                    {template?.name || config.template} • {template?.language || "Multi-Language"}
                   </p>
                 </div>
               </div>
@@ -1293,11 +1297,15 @@ function StepGenerate({
               <Separator className="my-2" />
               <p className="text-xs font-semibold mb-1">Template Features</p>
               <div className="flex flex-wrap gap-1">
-                {template.features.map((f) => (
-                  <Badge key={f} variant="outline" className="text-[9px] px-1.5 py-0">
-                    {f}
-                  </Badge>
-                ))}
+                {template?.features ? (
+                  template.features.map((f) => (
+                    <Badge key={f} variant="outline" className="text-[9px] px-1.5 py-0">
+                      {f}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-[10px] text-muted-foreground">Standard features</span>
+                )}
               </div>
             </div>
           </div>

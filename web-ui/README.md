@@ -1,8 +1,8 @@
-# 🚀 IDP-CLI Web Interface
+# 🚀 IDP-CLI Web Interface (v2.0.0)
 
-A modern web interface for the Internal Developer Platform CLI, providing a beautiful and intuitive way to create services, monitor health, visualize dependencies, and manage platform operations.
+A modern web interface for the Internal Developer Platform CLI, providing a beautiful and intuitive way to create services, monitor health, visualize dependencies, estimate cloud costs, scan security, and manage platform operations.
 
-**NEW in v0.3.0**: Enhanced with health monitoring dashboard, dependency visualization, and environment status checking.
+**NEW in v2.0.0**: 6 interactive platform tools including Health Monitor with live probes, Dependency Topology with Blast Radius analysis, Multi-cluster Environment status, Multi-cloud Cost Estimator, Security & CIS Scanner, and interactive CLI Playground with global Command Palette (`Ctrl+K`).
 
 ## ✨ Features
 
