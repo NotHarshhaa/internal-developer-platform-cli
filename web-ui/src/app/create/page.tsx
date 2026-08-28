@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef } from "react";
 import React from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -34,6 +35,14 @@ import {
   Keyboard as Kbd,
   Lightbulb,
   MoreHorizontal,
+  Search,
+  CheckCheck,
+  ShieldCheck,
+  Zap,
+  Globe,
+  Sliders,
+  Code,
+  FileCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,16 +66,34 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { templates, type Template, defaultConfig, type ServiceConfig, ciProviders, deployTargets, gitOpsTools, configPresets, type ConfigPreset, type RecentService } from "@/lib/data";
+import {
+  templates,
+  type Template,
+  defaultConfig,
+  type ServiceConfig,
+  ciProviders,
+  deployTargets,
+  gitOpsTools,
+  configPresets,
+  type ConfigPreset,
+  type RecentService,
+} from "@/lib/data";
 import { getTemplate } from "@/lib/generators/registry";
 import { createZip, downloadZip } from "@/lib/utils/zip";
-import { saveRecentService, getRecentServices, deleteRecentService, exportConfig, importConfig, copyToClipboard } from "@/lib/utils/storage";
+import {
+  saveRecentService,
+  getRecentServices,
+  deleteRecentService,
+  exportConfig,
+  importConfig,
+  copyToClipboard,
+} from "@/lib/utils/storage";
 import { generateServiceNameSuggestions } from "@/lib/utils/names";
 
 const steps = [
-  { id: 1, title: "Template", icon: Layers, description: "Choose a template" },
-  { id: 2, title: "Configure", icon: Settings, description: "Service settings" },
-  { id: 3, title: "Generate", icon: Rocket, description: "Review & download" },
+  { id: 1, title: "Select Template", icon: Layers, description: "Choose language & framework" },
+  { id: 2, title: "Configure Architecture", icon: Settings, description: "CI/CD, K8s, environment" },
+  { id: 3, title: "Review & Generate", icon: Rocket, description: "Preview files & download ZIP" },
 ];
 
 function CreateServiceContent() {
@@ -77,20 +104,22 @@ function CreateServiceContent() {
     template: searchParams.get("template") || "",
   });
   const [generating, setGenerating] = useState(false);
+  const [generationStep, setGenerationStep] = useState("");
   const [generated, setGenerated] = useState(false);
   const [nameError, setNameError] = useState("");
-  const [generationOutput, setGenerationOutput] = useState("");
-  const [generatedFiles, setGeneratedFiles] = useState<string[]>([]);
+  const [generatedFiles, setGeneratedFiles] = useState<{ path: string; content: string }[]>([]);
+  const [activePreviewFile, setActivePreviewFile] = useState<string>("");
   const [recentServices, setRecentServices] = useState<RecentService[]>([]);
   const [showRecent, setShowRecent] = useState(false);
-  const [previewFiles, setPreviewFiles] = useState<{ path: string; content: string }[]>([]);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const recentRef = React.useRef<HTMLDivElement>(null);
-  const actionsRef = React.useRef<HTMLDivElement>(null);
+  const [copiedCli, setCopiedCli] = useState(false);
+
+  const recentRef = useRef<HTMLDivElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const tpl = searchParams.get("template");
@@ -110,7 +139,6 @@ function CreateServiceContent() {
         setShowActionsMenu(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
@@ -132,11 +160,27 @@ function CreateServiceContent() {
   };
 
   const handleNext = () => {
+    if (step === 1) {
+      if (!config.name && config.template) {
+        setConfig((c) => ({ ...c, name: `${config.template}-service` }));
+      }
+    }
     if (step === 2) {
       const error = validateName(config.name);
       if (error) {
         setNameError(error);
         return;
+      }
+      // Pre-generate files for live code preview in Step 3
+      try {
+        const template = getTemplate(config.template, config);
+        const files = template.generateFiles();
+        setGeneratedFiles(files);
+        if (files.length > 0) {
+          setActivePreviewFile(files[0].path);
+        }
+      } catch (err) {
+        console.error("Preview generation error:", err);
       }
     }
     if (step < 3) setStep(step + 1);
@@ -144,53 +188,39 @@ function CreateServiceContent() {
 
   const handleGenerate = async () => {
     setGenerating(true);
-    setGenerationOutput("");
-    setGeneratedFiles([]);
+    setGenerationStep("Compiling microservice boilerplate...");
     
     try {
-      // Get the template generator
       const template = getTemplate(config.template, config);
       
-      // Generate files
+      await new Promise((r) => setTimeout(r, 250));
+      setGenerationStep("Generating multi-stage Dockerfile & K8s overlays...");
       const files = template.generateFiles();
-      setGeneratedFiles(files.map(f => f.path));
-      
-      // Create ZIP
+      setGeneratedFiles(files);
+      if (files.length > 0) {
+        setActivePreviewFile(files[0].path);
+      }
+
+      await new Promise((r) => setTimeout(r, 300));
+      setGenerationStep("Compressing production package ZIP...");
       const zipBlob = await createZip(files, config.name);
       
-      // Download ZIP
       downloadZip(zipBlob, `${config.name}.zip`);
-      
-      // Save to recent services
       saveRecentService(config, selectedTemplate?.name || config.template);
       setRecentServices(getRecentServices());
       
       setGenerated(true);
-      setGenerationOutput(`Successfully generated ${files.length} files for ${config.name}`);
       toast.success("Service generated successfully!", {
-        description: `Downloaded ${config.name}.zip with ${files.length} files.`,
+        description: `Downloaded ${config.name}.zip with ${files.length} production files.`,
       });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Failed to generate service";
       toast.error("Generation failed", {
         description: errorMsg,
       });
-      setGenerationOutput(errorMsg);
     } finally {
       setGenerating(false);
-    }
-  };
-
-  const handlePreviewFiles = () => {
-    try {
-      const template = getTemplate(config.template, config);
-      const files = template.generateFiles();
-      setPreviewFiles(files);
-      setShowPreview(true);
-    } catch (error) {
-      toast.error("Preview failed", {
-        description: error instanceof Error ? error.message : "Failed to generate preview",
-      });
+      setGenerationStep("");
     }
   };
 
@@ -224,28 +254,21 @@ function CreateServiceContent() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success("Configuration exported", {
-      description: "Downloaded configuration as JSON",
-    });
+    toast.success("Configuration exported as JSON");
   };
 
   const handleImportConfig = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
       const importedConfig = importConfig(content);
       if (importedConfig) {
         setConfig(importedConfig);
-        toast.success("Configuration imported", {
-          description: "Loaded configuration from file",
-        });
+        toast.success("Configuration imported successfully");
       } else {
-        toast.error("Import failed", {
-          description: "Invalid configuration file",
-        });
+        toast.error("Invalid configuration file");
       }
     };
     reader.readAsText(file);
@@ -256,18 +279,12 @@ function CreateServiceContent() {
     const json = exportConfig(config);
     const success = await copyToClipboard(json);
     if (success) {
-      toast.success("Configuration copied", {
-        description: "Copied to clipboard",
-      });
-    } else {
-      toast.error("Copy failed", {
-        description: "Could not copy to clipboard",
-      });
+      toast.success("Configuration copied to clipboard");
     }
   };
 
   const handleGenerateSuggestions = () => {
-    const suggestions = generateServiceNameSuggestions(config.template);
+    const suggestions = generateServiceNameSuggestions(config.template || "api");
     setNameSuggestions(suggestions);
     setShowSuggestions(true);
   };
@@ -278,132 +295,164 @@ function CreateServiceContent() {
     setNameError("");
   };
 
+  const cliCommand = `idp create ${config.name || "my-service"} --template ${config.template || "python-api"} --ci ${config.ci} --deploy ${config.deploy} ${config.gitops !== "none" ? `--gitops ${config.gitops}` : ""} ${config.docker ? "--docker" : ""} ${config.k8s ? "--k8s" : ""} ${config.monitoring ? "--monitoring" : ""} ${config.docs ? "--docs" : ""}`.replace(/\s+/g, " ").trim();
+
+  const handleCopyCliCommand = () => {
+    navigator.clipboard.writeText(cliCommand);
+    setCopiedCli(true);
+    toast.success("CLI command copied to clipboard");
+    setTimeout(() => setCopiedCli(false), 2000);
+  };
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey) {
-        if (e.key === "k") {
-          e.preventDefault();
-          setShowKeyboardShortcuts(!showKeyboardShortcuts);
-        }
         if (e.key === "Enter" && step < 3 && canProceed()) {
           e.preventDefault();
           handleNext();
         }
+        if (e.key === "k") {
+          e.preventDefault();
+          setShowKeyboardShortcuts(!showKeyboardShortcuts);
+        }
       }
       if (e.key === "Escape") {
         setShowRecent(false);
-        setShowPreview(false);
         setShowSuggestions(false);
         setShowKeyboardShortcuts(false);
         setShowActionsMenu(false);
+        setShowPreviewModal(false);
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [step, showKeyboardShortcuts, config]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-      {/* Compact Header */}
-      <div className="mb-4 flex items-start justify-between">
+    <div className="mx-auto max-w-6xl px-4 py-6 md:py-8 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight">Create a Service</h1>
-            <Badge variant="outline" className="text-[9px] px-2 py-0.5">
-              v2.0.0
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Rocket className="h-4.5 w-4.5" />
+            </div>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+              Create Production Service
+            </h1>
+            <Badge variant="outline" className="text-[10px] text-primary bg-primary/5 border-primary/20">
+              v2.0.0 Self-Service
             </Badge>
           </div>
           <p className="mt-1 text-xs md:text-sm text-muted-foreground">
-            Configure your service and download the generated code as a ZIP file
+            Bootstrap complete microservices with multi-stage Dockerfiles, K8s manifests, and CI/CD pipelines
           </p>
         </div>
+
+        {/* Header Action Tools */}
         <div className="flex items-center gap-2">
           {recentServices.length > 0 && (
             <div className="relative" ref={recentRef}>
-              <Button variant="outline" size="sm" onClick={() => {
-                setShowRecent(!showRecent);
-                setShowActionsMenu(false);
-              }} className="gap-1.5 h-8 text-xs">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowRecent(!showRecent);
+                  setShowActionsMenu(false);
+                }}
+                className="gap-1.5 h-8 text-xs"
+              >
                 <History className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Recent</span>
                 <Badge variant="secondary" className="ml-1 h-4 px-1 text-[9px]">
                   {recentServices.length}
                 </Badge>
               </Button>
+
               {showRecent && (
-                <Card className="absolute right-0 top-full z-50 mt-2 w-72 shadow-lg">
-                  <CardHeader className="pb-2 px-3">
-                    <CardTitle className="text-xs">Recent Services</CardTitle>
+                <Card className="absolute right-0 top-full z-50 mt-2 w-72 shadow-xl border-border/80">
+                  <CardHeader className="p-3 pb-2 border-b bg-muted/20">
+                    <CardTitle className="text-xs font-semibold flex items-center justify-between">
+                      <span>Recent Services</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">
+                        Click to restore
+                      </span>
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="max-h-64 overflow-y-auto">
-                      {recentServices.map((recent) => (
-                        <div
-                          key={recent.id}
-                          className="flex items-center justify-between border-b px-3 py-2 last:border-0 hover:bg-muted/50 transition-colors"
+                  <CardContent className="p-0 max-h-60 overflow-y-auto">
+                    {recentServices.map((recent) => (
+                      <div
+                        key={recent.id}
+                        className="flex items-center justify-between border-b px-3 py-2 last:border-0 hover:bg-muted/40 transition-colors"
+                      >
+                        <button
+                          onClick={() => loadRecentService(recent)}
+                          className="flex-1 text-left cursor-pointer"
                         >
-                          <button
-                            onClick={() => loadRecentService(recent)}
-                            className="flex-1 text-left"
-                          >
-                            <p className="text-xs font-medium">{recent.config.name}</p>
-                            <p className="text-[9px] text-muted-foreground">{recent.templateName}</p>
-                          </button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteRecentService(recent.id);
-                              setRecentServices(getRecentServices());
-                            }}
-                            className="h-5 w-5 p-0"
-                          >
-                            <Trash2 className="h-2.5 w-2.5" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
+                          <p className="text-xs font-medium text-foreground">{recent.config.name}</p>
+                          <p className="text-[10px] text-muted-foreground">{recent.templateName}</p>
+                        </button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteRecentService(recent.id);
+                            setRecentServices(getRecentServices());
+                          }}
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
                   </CardContent>
                 </Card>
               )}
             </div>
           )}
+
           <div className="relative" ref={actionsRef}>
-            <Button variant="ghost" size="sm" onClick={() => {
-              setShowActionsMenu(!showActionsMenu);
-              setShowRecent(false);
-            }} className="h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setShowActionsMenu(!showActionsMenu);
+                setShowRecent(false);
+              }}
+              className="h-8 px-2.5 text-xs gap-1"
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Options</span>
             </Button>
+
             {showActionsMenu && (
-              <Card className="absolute right-0 top-full z-50 mt-2 w-48 shadow-lg">
-                <CardContent className="p-1">
+              <Card className="absolute right-0 top-full z-50 mt-2 w-52 shadow-xl border-border/80">
+                <CardContent className="p-1.5 space-y-0.5">
                   <button
                     onClick={() => {
                       handleCopyConfig();
                       setShowActionsMenu(false);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted rounded transition-colors text-left"
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-accent rounded-md text-left transition-colors cursor-pointer"
                   >
-                    <Copy className="h-3 w-3" />
-                    Copy Config
+                    <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                    Copy Config (JSON)
                   </button>
                   <button
                     onClick={() => {
                       handleExportConfig();
                       setShowActionsMenu(false);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted rounded transition-colors text-left"
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-accent rounded-md text-left transition-colors cursor-pointer"
                   >
-                    <Download className="h-3 w-3" />
-                    Export Config
+                    <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                    Export Config File
                   </button>
-                  <label className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted rounded transition-colors cursor-pointer">
-                    <UploadCloud className="h-3 w-3" />
-                    Import Config
+                  <label className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-accent rounded-md text-left transition-colors cursor-pointer">
+                    <UploadCloud className="h-3.5 w-3.5 text-muted-foreground" />
+                    Import Config File
                     <input
                       type="file"
                       accept=".json"
@@ -420,10 +469,10 @@ function CreateServiceContent() {
                       setShowKeyboardShortcuts(true);
                       setShowActionsMenu(false);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted rounded transition-colors text-left"
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs hover:bg-accent rounded-md text-left transition-colors cursor-pointer"
                   >
-                    <Kbd className="h-3 w-3" />
-                    Keyboard Shortcuts
+                    <Kbd className="h-3.5 w-3.5 text-muted-foreground" />
+                    Shortcuts & Tips
                   </button>
                 </CardContent>
               </Card>
@@ -432,62 +481,63 @@ function CreateServiceContent() {
         </div>
       </div>
 
-      {/* Compact Stepper */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between gap-2">
-          {steps.map((s, i) => (
-            <div key={s.id} className="flex items-center flex-1">
+      {/* Stepper Navigation */}
+      <div className="rounded-xl border bg-card/60 p-2 shadow-xs">
+        <div className="grid grid-cols-3 gap-2">
+          {steps.map((s) => {
+            const isCompleted = step > s.id;
+            const isCurrent = step === s.id;
+            return (
               <button
+                key={s.id}
                 onClick={() => {
                   if (s.id < step) setStep(s.id);
                 }}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg px-2 py-2 transition-all w-full",
-                  step === s.id
-                    ? "bg-primary/10 border border-primary/20"
-                    : step > s.id
-                    ? "opacity-80 hover:bg-muted cursor-pointer"
-                    : "opacity-40"
-                )}
                 disabled={s.id > step}
+                className={cn(
+                  "flex items-center gap-3 p-2 rounded-lg text-left transition-all cursor-pointer",
+                  isCurrent
+                    ? "bg-primary/10 border border-primary/30 shadow-xs"
+                    : isCompleted
+                    ? "hover:bg-muted/50 opacity-90"
+                    : "opacity-40 cursor-not-allowed"
+                )}
               >
                 <div
                   className={cn(
-                    "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold shrink-0",
-                    step > s.id
-                      ? "bg-primary text-primary-foreground"
-                      : step === s.id
+                    "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold shrink-0 transition-colors",
+                    isCompleted
+                      ? "bg-emerald-500 text-white"
+                      : isCurrent
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground"
                   )}
                 >
-                  {step > s.id ? <Check className="h-3 w-3" /> : s.id}
+                  {isCompleted ? <Check className="h-3.5 w-3.5" /> : s.id}
                 </div>
-                <div className="text-left hidden sm:block">
-                  <p className="text-xs font-semibold">{s.title}</p>
+                <div className="hidden md:block">
+                  <p className="text-xs font-semibold text-foreground leading-tight">
+                    {s.title}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    {s.description}
+                  </p>
                 </div>
               </button>
-              {i < steps.length - 1 && (
-                <div
-                  className={cn(
-                    "h-px w-4 mx-1 shrink-0",
-                    step > s.id ? "bg-primary" : "bg-border"
-                  )}
-                />
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
-      {/* Step Content */}
-      <div className="min-h-[200px]">
+      {/* Step Contents */}
+      <div>
         {step === 1 && (
           <StepTemplate
             selected={config.template}
-            onSelect={(id) => setConfig({ ...config, template: config.template === id ? "" : id })}
+            onSelect={(id) => setConfig({ ...config, template: id })}
           />
         )}
+
         {step === 2 && (
           <StepConfigure
             config={config}
@@ -502,134 +552,117 @@ function CreateServiceContent() {
             onSelectSuggestion={handleSelectSuggestion}
           />
         )}
+
         {step === 3 && (
-          <StepGenerate
+          <StepReviewAndGenerate
             config={config}
             template={selectedTemplate}
             generating={generating}
+            generationStep={generationStep}
             generated={generated}
-            onGenerate={handleGenerate}
-            generationOutput={generationOutput}
             generatedFiles={generatedFiles}
-            onPreview={handlePreviewFiles}
+            activeFile={activePreviewFile}
+            setActiveFile={setActivePreviewFile}
+            onGenerate={handleGenerate}
+            cliCommand={cliCommand}
+            onCopyCli={handleCopyCliCommand}
+            copiedCli={copiedCli}
           />
         )}
       </div>
 
-      {/* Compact Navigation */}
-      <div className="mt-6 flex items-center justify-between border-t pt-4">
+      {/* Sticky Bottom Navigation Footer */}
+      <div className="flex items-center justify-between border-t pt-4">
         <Button
           variant="outline"
           onClick={() => setStep(step - 1)}
-          disabled={step === 1}
+          disabled={step === 1 || generating}
           size="sm"
           className="gap-1.5 text-xs h-8"
         >
-          <ArrowLeft className="h-3 w-3" />
+          <ArrowLeft className="h-3.5 w-3.5" />
           Back
         </Button>
-        {step < 3 ? (
-          <Button
-            onClick={handleNext}
-            disabled={!canProceed()}
-            size="sm"
-            className="gap-1.5 text-xs h-8"
-          >
-            Continue
-            <ArrowRight className="h-3 w-3" />
-          </Button>
-        ) : !generated ? (
-          <Button
-            onClick={handleGenerate}
-            disabled={generating}
-            size="sm"
-            className="gap-1.5 text-xs h-8"
-          >
-            {generating ? (
-              <>
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span className="hidden sm:inline">Generating...</span>
-              </>
-            ) : (
-              <>
-                <Download className="h-3 w-3" />
-                <span className="hidden sm:inline">Download</span>
-              </>
-            )}
-          </Button>
-        ) : (
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8" disabled>
-            <CheckCircle2 className="h-3 w-3" />
-            <span className="hidden sm:inline">Downloaded!</span>
-          </Button>
-        )}
-      </div>
 
-      {/* File Preview Dialog */}
-      <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Preview Generated Files</DialogTitle>
-            <DialogDescription>
-              Review the files that will be generated for {config.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 overflow-y-auto max-h-[60vh] space-y-2">
-            {previewFiles.map((file, idx) => (
-              <div key={idx} className="border rounded-lg">
-                <div className="bg-muted px-3 py-2 border-b flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-mono">{file.path}</span>
-                </div>
-                <pre className="p-3 text-xs font-mono overflow-x-auto bg-neutral-950 text-green-400 max-h-48 overflow-y-auto">
-                  {file.content}
-                </pre>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+        <div className="flex items-center gap-2">
+          {step < 3 ? (
+            <Button
+              onClick={handleNext}
+              disabled={!canProceed()}
+              size="sm"
+              className="gap-1.5 text-xs h-8 shadow-xs"
+            >
+              Continue
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          ) : !generated ? (
+            <Button
+              onClick={handleGenerate}
+              disabled={generating}
+              size="sm"
+              className="gap-1.5 text-xs h-8 shadow-md"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Download className="h-3.5 w-3.5" />
+                  Generate & Download ZIP
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleGenerate}
+              className="gap-1.5 text-xs h-8 bg-emerald-600 hover:bg-emerald-700"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download Again (.zip)
+            </Button>
+          )}
+        </div>
+      </div>
 
       {/* Keyboard Shortcuts Dialog */}
       <Dialog open={showKeyboardShortcuts} onOpenChange={setShowKeyboardShortcuts}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Keyboard Shortcuts</DialogTitle>
-            <DialogDescription>
-              Power user shortcuts to navigate faster
+            <DialogTitle className="text-sm font-bold flex items-center gap-2">
+              <Kbd className="h-4 w-4 text-primary" />
+              Keyboard Shortcuts & Productivity
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Fast navigation shortcuts for power users
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 mt-4">
-            <div className="flex items-center justify-between text-sm">
-              <span>Continue to next step</span>
-              <kbd className="px-2 py-1 bg-muted rounded text-xs">Ctrl + Enter</kbd>
+          <div className="space-y-2 mt-3 text-xs">
+            <div className="flex items-center justify-between p-2 rounded-md border">
+              <span>Next step / Proceed</span>
+              <kbd className="px-2 py-0.5 bg-muted rounded border text-[11px] font-mono">
+                Ctrl + Enter
+              </kbd>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span>Show keyboard shortcuts</span>
-              <kbd className="px-2 py-1 bg-muted rounded text-xs">Ctrl + K</kbd>
+            <div className="flex items-center justify-between p-2 rounded-md border">
+              <span>Quick command search</span>
+              <kbd className="px-2 py-0.5 bg-muted rounded border text-[11px] font-mono">
+                Ctrl + K
+              </kbd>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span>Close dialogs/popups</span>
-              <kbd className="px-2 py-1 bg-muted rounded text-xs">Escape</kbd>
+            <div className="flex items-center justify-between p-2 rounded-md border">
+              <span>Dismiss dialogs / dropdowns</span>
+              <kbd className="px-2 py-0.5 bg-muted rounded border text-[11px] font-mono">
+                Escape
+              </kbd>
             </div>
           </div>
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-export default function CreatePage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      }
-    >
-      <CreateServiceContent />
-    </Suspense>
   );
 }
 
@@ -643,71 +676,115 @@ function StepTemplate({
   onSelect: (id: string) => void;
 }) {
   const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
 
-  const filtered =
-    filter === "all" ? templates : templates.filter((t) => t.category === filter);
+  const filtered = templates.filter((t) => {
+    const matchesCategory = filter === "all" || t.category === filter;
+    const matchesSearch =
+      t.name.toLowerCase().includes(search.toLowerCase()) ||
+      t.framework.toLowerCase().includes(search.toLowerCase()) ||
+      t.language.toLowerCase().includes(search.toLowerCase()) ||
+      t.description.toLowerCase().includes(search.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        {["all", "backend", "frontend", "tools"].map((f) => (
-          <Button
-            key={f}
-            variant={filter === f ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter(f)}
-            className="capitalize h-7 text-xs"
-          >
-            {f === "all" ? "All" : f}
-          </Button>
-        ))}
+    <div className="space-y-4">
+      {/* Category Pills & Search */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {["all", "backend", "frontend", "tools"].map((f) => (
+            <Button
+              key={f}
+              variant={filter === f ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFilter(f)}
+              className="capitalize h-7 text-xs px-3"
+            >
+              {f === "all" ? "All Boilerplates (18)" : f}
+            </Button>
+          ))}
+        </div>
+
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Search FastAPI, Next.js, Go..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-7.5 text-xs pl-8"
+          />
+        </div>
       </div>
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((t) => (
-          <Card
-            key={t.id}
-            className={cn(
-              "cursor-pointer transition-all hover:border-primary/50",
-              selected === t.id
-                ? "ring-2 ring-primary border-primary"
-                : "hover:border-primary/30"
-            )}
-            onClick={() => onSelect(t.id)}
-          >
-            <CardHeader className="pb-2 p-3">
-              <div className="flex items-center justify-between mb-2">
-                <t.icon className="h-5 w-5" />
-                <div className="flex items-center gap-1">
-                  <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
-                    {t.framework}
-                  </Badge>
-                  {selected === t.id && (
-                    <div className="h-4 w-4 rounded-full bg-primary flex items-center justify-center">
-                      <Check className="h-2.5 w-2.5 text-primary-foreground" />
-                    </div>
-                  )}
+
+      {/* Templates Grid */}
+      <div className="grid gap-3.5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {filtered.map((t) => {
+          const isSelected = selected === t.id;
+          return (
+            <Card
+              key={t.id}
+              onClick={() => onSelect(t.id)}
+              className={cn(
+                "group cursor-pointer transition-all duration-200 hover:border-primary/50 relative overflow-hidden",
+                isSelected
+                  ? "ring-2 ring-primary border-primary bg-primary/5 shadow-md"
+                  : "hover:shadow-xs"
+              )}
+            >
+              <CardHeader className="p-3.5 pb-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-foreground group-hover:scale-105 transition-transform">
+                    {React.createElement(t.icon, { className: "h-5 w-5 text-primary" })}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
+                      {t.language}
+                    </Badge>
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono">
+                      {t.framework}
+                    </Badge>
+                    {isSelected && (
+                      <div className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs">
+                        <Check className="h-2.5 w-2.5" />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <CardTitle className="text-sm">{t.name}</CardTitle>
-              <CardDescription className="text-xs line-clamp-2 mt-1">
-                {t.description}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0 p-3">
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <span>{t.language}</span>
-                <span>•</span>
-                <span className="capitalize">{t.category}</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+
+                <CardTitle className="text-sm font-bold group-hover:text-primary transition-colors">
+                  {t.name}
+                </CardTitle>
+                <CardDescription className="text-xs line-clamp-2 mt-1 leading-relaxed">
+                  {t.description}
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="p-3.5 pt-0 space-y-2">
+                <div className="flex flex-wrap gap-1">
+                  {t.features.slice(0, 3).map((f) => (
+                    <Badge key={f} variant="outline" className="text-[8px] px-1 py-0 font-normal">
+                      {f}
+                    </Badge>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t text-[10px]">
+                  <span className="text-muted-foreground capitalize">{t.category} component</span>
+                  <span className={cn("font-medium", isSelected ? "text-primary" : "text-muted-foreground group-hover:text-primary")}>
+                    {isSelected ? "Selected ✓" : "Click to select &rarr;"}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-/* ────────── Step 2: Configure ────────── */
+/* ────────── Step 2: Configure Architecture ────────── */
 
 function StepConfigure({
   config,
@@ -735,78 +812,106 @@ function StepConfigure({
   const selectedTemplate = templates.find((t) => t.id === config.template);
 
   return (
-    <div className="grid gap-4 md:gap-6 lg:grid-cols-[1fr_280px]">
-      <div className="space-y-4">
-        {/* Service Name */}
-        <div className="space-y-2">
-          <Label htmlFor="name" className="text-xs font-semibold flex items-center justify-between">
-            Service Name
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onGenerateSuggestions}
-              className="h-6 text-[10px] gap-1"
-            >
-              <Lightbulb className="h-3 w-3" />
-              Suggest
-            </Button>
-          </Label>
-          <div className="relative">
-            <Input
-              id="name"
-              placeholder="my-awesome-service"
-              value={config.name}
-              onChange={(e) => {
-                setConfig({ ...config, name: e.target.value });
-                if (nameError) setNameError(validateName(e.target.value));
-              }}
-              className={cn("h-9 text-sm", nameError && "border-destructive")}
-            />
-            {showSuggestions && (
-              <Card className="absolute top-full left-0 right-0 z-50 mt-1 shadow-lg">
-                <CardContent className="p-2">
-                  <p className="text-[10px] text-muted-foreground mb-2">Click to use a suggestion:</p>
-                  <div className="space-y-1">
-                    {nameSuggestions.map((suggestion, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => onSelectSuggestion(suggestion)}
-                        className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-muted transition-colors"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-          {nameError ? (
-            <p className="text-[10px] text-destructive">{nameError}</p>
-          ) : (
-            <p className="text-[10px] text-muted-foreground">
-              Lowercase letters, numbers, and hyphens. Must start with a letter.
-            </p>
-          )}
-        </div>
+    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      {/* Left Column: Form Controls */}
+      <div className="space-y-5">
+        {/* Service Identity */}
+        <Card className="border-border/80">
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-xs font-semibold flex items-center justify-between">
+              <span>Service Identity</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onGenerateSuggestions}
+                className="h-6 text-[10px] gap-1 text-primary hover:text-primary hover:bg-primary/10"
+              >
+                <Lightbulb className="h-3 w-3" />
+                Smart Name Generator
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-1 space-y-3">
+            <div className="relative">
+              <Input
+                id="name"
+                placeholder="e.g. order-processing-api"
+                value={config.name}
+                onChange={(e) => {
+                  setConfig({ ...config, name: e.target.value });
+                  if (nameError) setNameError(validateName(e.target.value));
+                }}
+                className={cn("h-8.5 text-xs font-medium", nameError && "border-destructive")}
+              />
+              {showSuggestions && (
+                <Card className="absolute top-full left-0 right-0 z-50 mt-1 shadow-xl border-border/80">
+                  <CardContent className="p-2 space-y-1">
+                    <p className="text-[10px] text-muted-foreground px-2 py-0.5 font-medium">
+                      Select a suggested service name:
+                    </p>
+                    <div className="grid grid-cols-2 gap-1">
+                      {nameSuggestions.map((s, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => onSelectSuggestion(s)}
+                          className="px-2 py-1 text-xs text-left rounded-md hover:bg-primary/10 hover:text-primary transition-colors font-mono"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+            {nameError && <p className="text-[10px] text-destructive">{nameError}</p>}
 
-        {/* Configuration Presets */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="space-y-1">
+                <Label htmlFor="port" className="text-[10px] text-muted-foreground">
+                  Service Port
+                </Label>
+                <Input
+                  id="port"
+                  type="number"
+                  value={config.port}
+                  onChange={(e) => setConfig({ ...config, port: parseInt(e.target.value) || 8080 })}
+                  className="h-7.5 text-xs font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="outputDir" className="text-[10px] text-muted-foreground">
+                  Output Directory
+                </Label>
+                <Input
+                  id="outputDir"
+                  value={config.outputDir}
+                  onChange={(e) => setConfig({ ...config, outputDir: e.target.value })}
+                  className="h-7.5 text-xs font-mono"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 1-Click Architecture Presets */}
         <div className="space-y-2">
-          <Label className="text-xs font-semibold flex items-center gap-1.5">
-            <Sparkles className="h-3 w-3" />
-            Quick Presets
+          <Label className="text-xs font-semibold flex items-center gap-1.5 text-muted-foreground">
+            <Sparkles className="h-3 w-3 text-primary" />
+            Architecture Presets
           </Label>
           <div className="grid grid-cols-3 gap-2">
             {configPresets.map((preset) => (
               <Button
                 key={preset.id}
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => applyPreset(preset)}
-                className="flex flex-col items-center gap-1 h-auto py-2.5"
+                className="flex flex-col items-center h-auto py-2.5 text-center hover:border-primary/50"
               >
-                <span className="text-xs font-medium">{preset.name}</span>
-                <span className="text-[9px] text-muted-foreground text-center leading-tight">
+                <span className="font-semibold text-xs">{preset.name}</span>
+                <span className="text-[9px] text-muted-foreground mt-0.5 line-clamp-1">
                   {preset.description}
                 </span>
               </Button>
@@ -814,584 +919,452 @@ function StepConfigure({
           </div>
         </div>
 
-        <Separator />
-
-        {/* CI/CD */}
-        <div className="space-y-2">
-          <Label className="text-xs font-semibold">CI/CD Provider</Label>
-          <div className="grid gap-2 grid-cols-2 sm:grid-cols-3">
-            {ciProviders.map((ci) => (
-              <Card
-                key={ci.id}
-                className={cn(
-                  "cursor-pointer transition-all hover:border-primary/50",
-                  config.ci === ci.id
-                    ? "ring-2 ring-primary border-primary"
-                    : "hover:border-primary/30"
-                )}
-                onClick={() => setConfig({ ...config, ci: ci.id })}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-2">
-                    <ci.icon className="h-4 w-4" />
-                    <div>
-                      <p className="text-xs font-medium">{ci.name}</p>
-                      <p className="text-[9px] text-muted-foreground line-clamp-1">
-                        {ci.description}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Deploy Target */}
-        <div className="space-y-2">
-          <Label className="text-xs font-semibold">Deploy Target</Label>
-          <div className="grid gap-2 grid-cols-2">
-            {deployTargets.map((dt) => (
-              <Card
-                key={dt.id}
-                className={cn(
-                  "cursor-pointer transition-all hover:border-primary/50",
-                  config.deploy === dt.id
-                    ? "ring-2 ring-primary border-primary"
-                    : "hover:border-primary/30"
-                )}
-                onClick={() => setConfig({ ...config, deploy: dt.id })}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-2">
-                    <dt.icon className="h-4 w-4" />
-                    <div>
-                      <p className="text-xs font-medium">{dt.name}</p>
-                      <p className="text-[9px] text-muted-foreground">
-                        {dt.description}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* GitOps */}
-        <div className="space-y-2">
-          <Label className="text-xs font-semibold">GitOps Tool</Label>
-          <div className="grid gap-2 grid-cols-2 sm:grid-cols-3">
-            {gitOpsTools.map((gt) => (
-              <Card
-                key={gt.id}
-                className={cn(
-                  "cursor-pointer transition-all hover:border-primary/50",
-                  config.gitops === gt.id
-                    ? "ring-2 ring-primary border-primary"
-                    : "hover:border-primary/30"
-                )}
-                onClick={() => setConfig({ ...config, gitops: gt.id })}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-2">
-                    <gt.icon className="h-4 w-4" />
-                    <div>
-                      <p className="text-xs font-medium">{gt.name}</p>
-                      <p className="text-[9px] text-muted-foreground">
-                        {gt.description}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Service Configuration */}
-        <div className="space-y-3">
-          <Label className="text-xs font-semibold">Service Configuration</Label>
-          <div className="grid gap-3 grid-cols-2">
-            {/* Port */}
+        {/* CI/CD & Deploy Target Selection */}
+        <Card className="border-border/80">
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-xs font-semibold">CI/CD & Deployment Target</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-1 space-y-4">
+            {/* CI Provider */}
             <div className="space-y-1.5">
-              <Label htmlFor="port" className="text-[10px] flex items-center gap-1.5">
-                <Server className="h-3 w-3" />
-                Service Port
-              </Label>
-              <Input
-                id="port"
-                type="number"
-                min="1024"
-                max="65535"
-                value={config.port}
-                onChange={(e) => setConfig({ ...config, port: parseInt(e.target.value) || 8080 })}
-                className="h-8 text-sm"
-              />
+              <Label className="text-[11px] text-muted-foreground">CI/CD Automation</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {ciProviders.map((ci) => (
+                  <Button
+                    key={ci.id}
+                    type="button"
+                    variant={config.ci === ci.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setConfig({ ...config, ci: ci.id })}
+                    className="flex flex-col items-center h-auto py-2"
+                  >
+                    <span className="font-medium text-xs">{ci.name}</span>
+                  </Button>
+                ))}
+              </div>
             </div>
 
-            {/* Output Directory */}
-            <div className="space-y-1.5">
-              <Label htmlFor="outputDir" className="text-[10px] flex items-center gap-1.5">
-                <FolderOpen className="h-3 w-3" />
-                Output Directory
-              </Label>
-              <Input
-                id="outputDir"
-                value={config.outputDir}
-                onChange={(e) => setConfig({ ...config, outputDir: e.target.value })}
-                className="h-8 text-sm"
-                placeholder="./output"
-              />
-            </div>
-          </div>
-        </div>
+            {/* Deploy & GitOps */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">Deployment Target</Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {deployTargets.map((dt) => (
+                    <Button
+                      key={dt.id}
+                      type="button"
+                      variant={config.deploy === dt.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setConfig({ ...config, deploy: dt.id })}
+                      className="h-8 text-xs font-medium"
+                    >
+                      {dt.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
 
-        {/* Kubernetes Resources (only show if k8s is enabled) */}
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-muted-foreground">GitOps Operator</Label>
+                <div className="grid grid-cols-3 gap-1">
+                  {gitOpsTools.map((gt) => (
+                    <Button
+                      key={gt.id}
+                      type="button"
+                      variant={config.gitops === gt.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setConfig({ ...config, gitops: gt.id })}
+                      className="h-8 text-xs font-medium"
+                    >
+                      {gt.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Kubernetes Resource Limits (if k8s enabled) */}
         {config.k8s && (
-          <div className="space-y-3">
-            <Label className="text-xs font-semibold flex items-center gap-2">
-              <Cpu className="h-3.5 w-3.5" />
-              Kubernetes Resources
-            </Label>
-            <div className="grid gap-3 grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="replicas" className="text-[10px]">Replicas</Label>
-                <Input
-                  id="replicas"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={config.replicas}
-                  onChange={(e) => setConfig({ ...config, replicas: parseInt(e.target.value) || 1 })}
-                  className="h-8 text-sm"
-                />
+          <Card className="border-border/80">
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-xs font-semibold flex items-center gap-1.5">
+                <Cpu className="h-3.5 w-3.5 text-primary" />
+                Kubernetes Pod Resource Allocations
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-1 space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                <div className="space-y-1">
+                  <Label htmlFor="replicas" className="text-[10px] text-muted-foreground">Replicas</Label>
+                  <Input
+                    id="replicas"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={config.replicas}
+                    onChange={(e) => setConfig({ ...config, replicas: parseInt(e.target.value) || 1 })}
+                    className="h-7.5 text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="cpuReq" className="text-[10px] text-muted-foreground">CPU Request</Label>
+                  <Input
+                    id="cpuReq"
+                    value={config.resources.cpuRequest}
+                    onChange={(e) => setConfig({ ...config, resources: { ...config.resources, cpuRequest: e.target.value } })}
+                    className="h-7.5 text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="cpuLim" className="text-[10px] text-muted-foreground">CPU Limit</Label>
+                  <Input
+                    id="cpuLim"
+                    value={config.resources.cpuLimit}
+                    onChange={(e) => setConfig({ ...config, resources: { ...config.resources, cpuLimit: e.target.value } })}
+                    className="h-7.5 text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="memLim" className="text-[10px] text-muted-foreground">Memory Limit</Label>
+                  <Input
+                    id="memLim"
+                    value={config.resources.memoryLimit}
+                    onChange={(e) => setConfig({ ...config, resources: { ...config.resources, memoryLimit: e.target.value } })}
+                    className="h-7.5 text-xs font-mono"
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cpuRequest" className="text-[10px]">CPU Request</Label>
-                <Input
-                  id="cpuRequest"
-                  value={config.resources.cpuRequest}
-                  onChange={(e) => setConfig({ ...config, resources: { ...config.resources, cpuRequest: e.target.value } })}
-                  className="h-8 text-sm"
-                  placeholder="100m"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cpuLimit" className="text-[10px]">CPU Limit</Label>
-                <Input
-                  id="cpuLimit"
-                  value={config.resources.cpuLimit}
-                  onChange={(e) => setConfig({ ...config, resources: { ...config.resources, cpuLimit: e.target.value } })}
-                  className="h-8 text-sm"
-                  placeholder="500m"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="memoryRequest" className="text-[10px]">Memory Request</Label>
-                <Input
-                  id="memoryRequest"
-                  value={config.resources.memoryRequest}
-                  onChange={(e) => setConfig({ ...config, resources: { ...config.resources, memoryRequest: e.target.value } })}
-                  className="h-8 text-sm"
-                  placeholder="128Mi"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="memoryLimit" className="text-[10px]">Memory Limit</Label>
-                <Input
-                  id="memoryLimit"
-                  value={config.resources.memoryLimit}
-                  onChange={(e) => setConfig({ ...config, resources: { ...config.resources, memoryLimit: e.target.value } })}
-                  className="h-8 text-sm"
-                  placeholder="512Mi"
-                />
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Environment Variables */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs font-semibold">Environment Variables</Label>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setConfig({ ...config, envVars: [...config.envVars, { key: "", value: "" }] })}
-              className="gap-1 h-7 text-xs"
-            >
-              <Plus className="h-3 w-3" />
-              <span className="hidden sm:inline">Add</span>
-            </Button>
-          </div>
-          {config.envVars.length > 0 ? (
-            <div className="space-y-1.5">
-              {config.envVars.map((env, idx) => (
-                <div key={idx} className="flex gap-1.5">
-                  <Input
-                    placeholder="KEY"
-                    value={env.key}
-                    onChange={(e) => {
-                      const newEnvVars = [...config.envVars];
-                      newEnvVars[idx].key = e.target.value;
-                      setConfig({ ...config, envVars: newEnvVars });
-                    }}
-                    className="h-8 font-mono text-[10px]"
-                  />
-                  <Input
-                    placeholder="value"
-                    value={env.value}
-                    onChange={(e) => {
-                      const newEnvVars = [...config.envVars];
-                      newEnvVars[idx].value = e.target.value;
-                      setConfig({ ...config, envVars: newEnvVars });
-                    }}
-                    className="h-8 font-mono text-[10px]"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      const newEnvVars = config.envVars.filter((_, i) => i !== idx);
-                      setConfig({ ...config, envVars: newEnvVars });
-                    }}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-[10px] text-muted-foreground">No environment variables configured</p>
-          )}
-        </div>
-
-        <Separator />
-
-        {/* Optional Features */}
-        <div className="space-y-3">
-          <Label className="text-xs font-semibold">Optional Features</Label>
-          <div className="grid gap-3 grid-cols-2">
-            {[
-              {
-                key: "docker" as const,
-                label: "Docker",
-                desc: "Multi-stage Dockerfile with .dockerignore",
-                icon: Container,
-              },
-              {
-                key: "k8s" as const,
-                label: "Kubernetes",
-                desc: "Manifests with Kustomize overlays",
-                icon: Container,
-              },
-              {
-                key: "monitoring" as const,
-                label: "Monitoring",
-                desc: "Prometheus rules & Grafana dashboards",
-                icon: BarChart3,
-              },
-              {
-                key: "docs" as const,
-                label: "Documentation",
-                desc: "README, deployment & architecture docs",
-                icon: FileText,
-              },
-            ].map((feat) => (
-              <div
-                key={feat.key}
-                className="flex items-center justify-between rounded-lg border p-3"
+        <Card className="border-border/80">
+          <CardHeader className="p-4 pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xs font-semibold">Environment Variables & Config</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfig({ ...config, envVars: [...config.envVars, { key: "", value: "" }] })}
+                className="gap-1 h-6 text-[10px]"
               >
-                <div className="flex items-center gap-2">
-                  <feat.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs font-medium">{feat.label}</p>
-                    <p className="text-[9px] text-muted-foreground">
-                      {feat.desc}
-                    </p>
+                <Plus className="h-3 w-3" />
+                Add Variable
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 pt-1 space-y-2">
+            {config.envVars.length > 0 ? (
+              <div className="space-y-1.5">
+                {config.envVars.map((env, idx) => (
+                  <div key={idx} className="flex gap-1.5">
+                    <Input
+                      placeholder="KEY (e.g. REDIS_HOST)"
+                      value={env.key}
+                      onChange={(e) => {
+                        const newVars = [...config.envVars];
+                        newVars[idx].key = e.target.value;
+                        setConfig({ ...config, envVars: newVars });
+                      }}
+                      className="h-7.5 font-mono text-[10px]"
+                    />
+                    <Input
+                      placeholder="value"
+                      value={env.value}
+                      onChange={(e) => {
+                        const newVars = [...config.envVars];
+                        newVars[idx].value = e.target.value;
+                        setConfig({ ...config, envVars: newVars });
+                      }}
+                      className="h-7.5 font-mono text-[10px]"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newVars = config.envVars.filter((_, i) => i !== idx);
+                        setConfig({ ...config, envVars: newVars });
+                      }}
+                      className="h-7.5 w-7.5 p-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
-                </div>
-                <Switch
-                  checked={config[feat.key]}
-                  onCheckedChange={(v) =>
-                    setConfig({ ...config, [feat.key]: v })
-                  }
-                />
+                ))}
               </div>
-            ))}
-          </div>
+            ) : (
+              <p className="text-[10px] text-muted-foreground italic">
+                No environment variables configured. Default settings will be applied.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Feature Switches */}
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { key: "docker" as const, label: "Docker Multi-Stage", desc: "Optimized non-root container" },
+            { key: "k8s" as const, label: "Kubernetes Manifests", desc: "Kustomize overlays & HPA" },
+            { key: "monitoring" as const, label: "Prometheus Metrics", desc: "Scrape rules & healthz" },
+            { key: "docs" as const, label: "Developer Docs", desc: "Architecture & OpenAPI README" },
+          ].map((feat) => (
+            <div
+              key={feat.key}
+              className="flex items-center justify-between rounded-lg border p-3 bg-muted/10"
+            >
+              <div>
+                <p className="text-xs font-semibold">{feat.label}</p>
+                <p className="text-[10px] text-muted-foreground">{feat.desc}</p>
+              </div>
+              <Switch
+                checked={config[feat.key]}
+                onCheckedChange={(val) => setConfig({ ...config, [feat.key]: val })}
+              />
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Sidebar preview */}
+      {/* Right Column: Live Architecture Blueprint Sidebar */}
       <div className="hidden lg:block">
         <div className="sticky top-20 space-y-3">
-          <Card>
-            <CardHeader className="pb-2 p-3">
-              <CardTitle className="text-xs">Selected Template</CardTitle>
+          <Card className="border-border/80 shadow-md">
+            <CardHeader className="p-3.5 pb-2 bg-muted/20 border-b">
+              <CardTitle className="text-xs font-bold flex items-center gap-1.5">
+                <Layers className="h-3.5 w-3.5 text-primary" />
+                Live Architecture Blueprint
+              </CardTitle>
             </CardHeader>
-            <CardContent className="p-3 pt-0">
+            <CardContent className="p-3.5 space-y-3">
               {selectedTemplate ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <selectedTemplate.icon className="h-5 w-5" />
-                    <div>
-                      <p className="font-semibold text-xs">{selectedTemplate.name}</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {selectedTemplate.language} • {selectedTemplate.framework}
-                      </p>
-                    </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    {React.createElement(selectedTemplate.icon, { className: "h-4 w-4" })}
                   </div>
-                  <Separator />
-                  <div className="space-y-1">
-                    {selectedTemplate.features.map((f) => (
-                      <div key={f} className="flex items-center gap-1.5 text-[10px]">
-                        <Check className="h-2.5 w-2.5 text-green-500" />
-                        {f}
-                      </div>
-                    ))}
+                  <div>
+                    <p className="text-xs font-bold">{selectedTemplate.name}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {selectedTemplate.language} • {selectedTemplate.framework}
+                    </p>
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground">
-                  No template selected
-                </p>
+                <p className="text-xs text-muted-foreground italic">No template selected</p>
               )}
+
+              <Separator />
+
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Service Name:</span>
+                  <span className="font-mono font-medium">{config.name || "unnamed"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">CI/CD:</span>
+                  <span className="font-medium">{config.ci}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Deploy Target:</span>
+                  <span className="font-medium">{config.deploy}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">GitOps:</span>
+                  <span className="font-medium">{config.gitops}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Port:</span>
+                  <span className="font-mono font-medium">{config.port}</span>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">
+                  Active Capabilities
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {config.docker && <Badge variant="secondary" className="text-[8px] px-1 py-0">Docker</Badge>}
+                  {config.k8s && <Badge variant="secondary" className="text-[8px] px-1 py-0">K8s</Badge>}
+                  {config.monitoring && <Badge variant="secondary" className="text-[8px] px-1 py-0">Metrics</Badge>}
+                  {config.docs && <Badge variant="secondary" className="text-[8px] px-1 py-0">Docs</Badge>}
+                </div>
+              </div>
             </CardContent>
           </Card>
-
-          {config.name && (
-            <Card>
-              <CardHeader className="pb-2 p-3">
-                <CardTitle className="text-xs">Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-1.5 p-3 pt-0 text-[10px]">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Name</span>
-                  <span className="font-medium font-mono">{config.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">CI/CD</span>
-                  <span className="font-medium">
-                    {ciProviders.find((c) => c.id === config.ci)?.name}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Deploy</span>
-                  <span className="font-medium">
-                    {deployTargets.find((d) => d.id === config.deploy)?.name}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">GitOps</span>
-                  <span className="font-medium">
-                    {gitOpsTools.find((g) => g.id === config.gitops)?.name}
-                  </span>
-                </div>
-                <Separator />
-                <div className="flex flex-wrap gap-1">
-                  {config.docker && <Badge variant="secondary" className="text-[9px] px-1 py-0">Docker</Badge>}
-                  {config.k8s && <Badge variant="secondary" className="text-[9px] px-1 py-0">K8s</Badge>}
-                  {config.monitoring && <Badge variant="secondary" className="text-[9px] px-1 py-0">Monitoring</Badge>}
-                  {config.docs && <Badge variant="secondary" className="text-[9px] px-1 py-0">Docs</Badge>}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>
   );
 }
 
-/* ────────── Step 3: Generate ────────── */
+/* ────────── Step 3: Review & Generate / Code Explorer ────────── */
 
-function StepGenerate({
+function StepReviewAndGenerate({
   config,
   template,
   generating,
+  generationStep,
   generated,
-  onGenerate,
-  generationOutput,
   generatedFiles,
-  onPreview,
+  activeFile,
+  setActiveFile,
+  onGenerate,
+  cliCommand,
+  onCopyCli,
+  copiedCli,
 }: {
   config: ServiceConfig;
   template?: Template;
   generating: boolean;
+  generationStep: string;
   generated: boolean;
+  generatedFiles: { path: string; content: string }[];
+  activeFile: string;
+  setActiveFile: (p: string) => void;
   onGenerate: () => void;
-  generationOutput: string;
-  generatedFiles: string[];
-  onPreview: () => void;
+  cliCommand: string;
+  onCopyCli: () => void;
+  copiedCli: boolean;
 }) {
-  return (
-    <div className="space-y-4">
-      {/* Preview Button */}
-      {!generated && (
-        <Button
-          variant="outline"
-          onClick={onPreview}
-          className="w-full gap-2"
-        >
-          <Eye className="h-4 w-4" />
-          Preview Generated Files
-        </Button>
-      )}
+  const currentFile = generatedFiles.find((f) => f.path === activeFile) || generatedFiles[0];
 
-      {/* Compact Review summary */}
-      <Card>
-        <CardHeader className="p-3">
-          <CardTitle className="text-sm">Configuration Review</CardTitle>
-          <CardDescription className="text-xs">
-            Review your settings before generating
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-3">
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                {template?.icon ? (
-                  React.createElement(template.icon, { className: "h-5 w-5 text-primary" })
-                ) : (
-                  <Rocket className="h-5 w-5 text-primary" />
-                )}
-                <div>
-                  <p className="font-semibold text-sm">{config.name || "Unnamed Service"}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {template?.name || config.template} • {template?.language || "Multi-Language"}
-                  </p>
-                </div>
-              </div>
-              <Separator />
-              <div className="space-y-2">
-                <ConfigRow
-                  icon={<GitBranch className="h-4 w-4" />}
-                  label="CI/CD"
-                  value={ciProviders.find((c) => c.id === config.ci)?.name || ""}
-                />
-                <ConfigRow
-                  icon={<Container className="h-4 w-4" />}
-                  label="Deploy"
-                  value={deployTargets.find((d) => d.id === config.deploy)?.name || ""}
-                />
-                <ConfigRow
-                  icon={<Rocket className="h-4 w-4" />}
-                  label="GitOps"
-                  value={gitOpsTools.find((g) => g.id === config.gitops)?.name || ""}
-                />
+  return (
+    <div className="space-y-5">
+      {/* Generated Summary Card */}
+      <Card className="border-border/80">
+        <CardHeader className="p-4 pb-2 bg-muted/20 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {template?.icon ? (
+                React.createElement(template.icon, { className: "h-5 w-5 text-primary" })
+              ) : (
+                <Rocket className="h-5 w-5 text-primary" />
+              )}
+              <div>
+                <CardTitle className="text-sm font-bold">{config.name}</CardTitle>
+                <CardDescription className="text-xs">
+                  {template?.name || config.template} • {template?.framework}
+                </CardDescription>
               </div>
             </div>
-            <div className="space-y-2">
-              <p className="text-xs font-semibold mb-1">Included Features</p>
-              <div className="grid grid-cols-2 gap-1">
-                <FeatureCheck label="Docker" enabled={config.docker} />
-                <FeatureCheck label="Kubernetes" enabled={config.k8s} />
-                <FeatureCheck label="Monitoring" enabled={config.monitoring} />
-                <FeatureCheck label="Docs" enabled={config.docs} />
-              </div>
-              <Separator className="my-2" />
-              <p className="text-xs font-semibold mb-1">Template Features</p>
-              <div className="flex flex-wrap gap-1">
-                {template?.features ? (
-                  template.features.map((f) => (
-                    <Badge key={f} variant="outline" className="text-[9px] px-1.5 py-0">
-                      {f}
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="text-[10px] text-muted-foreground">Standard features</span>
-                )}
-              </div>
+
+            <Badge variant="outline" className="text-[10px] font-mono">
+              {generatedFiles.length} Source Files Ready
+            </Badge>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-4 space-y-3">
+          {/* CLI Reproduce Command */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-muted-foreground flex items-center gap-1 font-medium">
+                <Terminal className="h-3.5 w-3.5 text-primary" />
+                Equivalent IDP CLI Command
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onCopyCli}
+                className="h-6 text-[10px] gap-1"
+              >
+                {copiedCli ? <CheckCheck className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                {copiedCli ? "Copied" : "Copy Command"}
+              </Button>
+            </div>
+            <div className="rounded-md bg-neutral-950 p-2 font-mono text-[11px] text-green-400 border border-neutral-800 select-all overflow-x-auto">
+              $ {cliCommand}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Generation Output */}
-      {(generating || generationOutput) && (
-        <Card>
-          <CardHeader className="pb-1.5 p-2">
-          <CardTitle className="text-xs flex items-center gap-1.5">
-            <Terminal className="h-3 w-3" />
-            {generating ? "Generating..." : "Output"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-2">
-          <div className="relative rounded-lg bg-neutral-950 p-2 font-mono text-[10px] text-green-400 overflow-x-auto max-h-40 overflow-y-auto">
-              {generating ? (
-                <div className="flex items-center gap-1.5">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  <span>Generating files...</span>
-                </div>
-              ) : (
-                <pre className="whitespace-pre-wrap">{generationOutput}</pre>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Interactive Code Explorer */}
+      {generatedFiles.length > 0 && (
+        <Card className="overflow-hidden border-border/80">
+          <div className="flex items-center justify-between p-3 border-b bg-muted/30">
+            <span className="text-xs font-bold flex items-center gap-1.5">
+              <FileCode className="h-4 w-4 text-primary" />
+              Live Generated Code Explorer
+            </span>
+            <span className="text-[10px] text-muted-foreground font-mono">
+              {currentFile?.path} ({currentFile?.content.split("\n").length} lines)
+            </span>
+          </div>
 
-      {/* Generated Files Tree */}
-      {generated && generatedFiles.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2 p-2">
-            <CardTitle className="text-xs flex items-center gap-1.5">
-              <FolderOpen className="h-3.5 w-3.5" />
-              Generated Files ({generatedFiles.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-2">
-            <div className="space-y-0.5 max-h-48 overflow-y-auto">
-              {generatedFiles.slice(0, 50).map((file, idx) => (
-                <div key={idx} className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors">
-                  <FileText className="h-2.5 w-2.5" />
-                  {file}
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] min-h-[300px] max-h-[420px]">
+            {/* File Tree */}
+            <div className="border-r bg-muted/10 p-2 overflow-y-auto space-y-0.5 text-xs">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase px-2 mb-1">
+                Project Files
+              </p>
+              {generatedFiles.map((file) => (
+                <button
+                  key={file.path}
+                  onClick={() => setActiveFile(file.path)}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-[11px] font-mono transition-colors cursor-pointer truncate",
+                    activeFile === file.path
+                      ? "bg-primary text-primary-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  )}
+                >
+                  <FileText className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{file.path}</span>
+                </button>
               ))}
-              {generatedFiles.length > 50 && (
-                <p className="text-[9px] text-muted-foreground mt-2">
-                  ... and {generatedFiles.length - 50} more files
-                </p>
-              )}
             </div>
-          </CardContent>
+
+            {/* Code Content */}
+            <div className="bg-neutral-950 p-3.5 font-mono text-xs text-neutral-200 overflow-auto">
+              <pre className="text-[11px] leading-relaxed">
+                {currentFile?.content}
+              </pre>
+            </div>
+          </div>
         </Card>
       )}
 
-      {/* Success Status with Next Steps */}
+      {/* Generating Progress State */}
+      {generating && (
+        <Card className="border-primary/30 bg-primary/5 p-4 text-center space-y-2 animate-pulse">
+          <div className="flex items-center justify-center gap-2 text-xs font-semibold text-primary">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>{generationStep || "Packaging microservice assets..."}</span>
+          </div>
+        </Card>
+      )}
+
+      {/* Success Download Card */}
       {generated && (
-        <Card className="border-green-500/30 bg-green-500/5">
-          <CardContent className="p-3">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/10">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-green-600 dark:text-green-400">
-                    Service Generated Successfully!
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Downloaded <code className="font-mono bg-muted px-1 rounded">{config.name}.zip</code> with {generatedFiles.length} files
-                  </p>
-                </div>
+        <Card className="border-emerald-500/30 bg-emerald-500/5">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+                <CheckCircle2 className="h-5 w-5" />
               </div>
-              
-              <Separator />
-              
               <div>
-                <p className="text-xs font-semibold mb-1.5">Next Steps:</p>
-                <ol className="text-[10px] text-muted-foreground space-y-1 list-decimal list-inside">
-                  <li>Extract the downloaded ZIP file</li>
-                  <li>Navigate to the extracted directory</li>
-                  <li>Install dependencies (check README.md for instructions)</li>
-                  <li>Run the service locally</li>
-                </ol>
+                <h4 className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                  Service Ready & Downloaded!
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Saved as <code className="font-mono font-semibold">{config.name}.zip</code> containing {generatedFiles.length} microservice files.
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <p className="text-xs font-semibold text-foreground mb-1">Quick Start in 3 Steps:</p>
+              <div className="rounded-md bg-neutral-950 p-3 font-mono text-[11px] text-green-400 space-y-1 border border-neutral-800">
+                <div>1. unzip {config.name}.zip</div>
+                <div>2. cd {config.name}</div>
+                <div>3. docker compose up --build</div>
               </div>
             </div>
           </CardContent>
@@ -1401,37 +1374,16 @@ function StepGenerate({
   );
 }
 
-/* ────────── Helpers ────────── */
-
-function ConfigRow({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
+export default function CreatePage() {
   return (
-    <div className="flex items-center justify-between text-xs">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <span className="font-medium">{value}</span>
-    </div>
-  );
-}
-
-function FeatureCheck({ label, enabled }: { label: string; enabled: boolean }) {
-  return (
-    <div className="flex items-center gap-1.5 text-xs">
-      {enabled ? (
-        <Check className="h-3 w-3 text-green-500" />
-      ) : (
-        <X className="h-3 w-3 text-muted-foreground/40" />
-      )}
-      <span className={cn(!enabled && "text-muted-foreground/50")}>{label}</span>
-    </div>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <CreateServiceContent />
+    </Suspense>
   );
 }
