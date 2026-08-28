@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Heart,
@@ -21,6 +21,9 @@ import {
   Globe,
   Radio,
   Sliders,
+  ChevronDown,
+  ChevronUp,
+  Terminal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 interface ServiceHealth {
@@ -41,6 +45,12 @@ interface ServiceHealth {
   memoryMb: number;
   endpoint: string;
   lastChecked: string;
+  details?: {
+    version: string;
+    connections: number;
+    threadPool: string;
+    p95Latency: string;
+  };
 }
 
 const initialServices: ServiceHealth[] = [
@@ -55,6 +65,7 @@ const initialServices: ServiceHealth[] = [
     memoryMb: 184,
     endpoint: "/api/v1/auth/health",
     lastChecked: "Just now",
+    details: { version: "v2.4.1", connections: 142, threadPool: "Active (8/16)", p95Latency: "24ms" },
   },
   {
     id: "core-api",
@@ -67,6 +78,7 @@ const initialServices: ServiceHealth[] = [
     memoryMb: 340,
     endpoint: "/healthz",
     lastChecked: "Just now",
+    details: { version: "v3.12.0", connections: 98, threadPool: "Asyncio Event Loop", p95Latency: "44ms" },
   },
   {
     id: "node-worker",
@@ -79,6 +91,7 @@ const initialServices: ServiceHealth[] = [
     memoryMb: 210,
     endpoint: "/health",
     lastChecked: "1m ago",
+    details: { version: "v20.11.0", connections: 34, threadPool: "Libuv Worker Threads", p95Latency: "62ms" },
   },
   {
     id: "postgres-db",
@@ -91,6 +104,7 @@ const initialServices: ServiceHealth[] = [
     memoryMb: 1420,
     endpoint: "postgres:5432",
     lastChecked: "Just now",
+    details: { version: "PostgreSQL 16.3", connections: 28, threadPool: "Connection Pool (28/100)", p95Latency: "7ms" },
   },
   {
     id: "redis-cache",
@@ -103,6 +117,7 @@ const initialServices: ServiceHealth[] = [
     memoryMb: 480,
     endpoint: "redis:6379",
     lastChecked: "Just now",
+    details: { version: "Redis 7.2.4", connections: 840, threadPool: "Single Thread Event Loop", p95Latency: "2ms" },
   },
   {
     id: "kafka-broker",
@@ -115,6 +130,7 @@ const initialServices: ServiceHealth[] = [
     memoryMb: 2150,
     endpoint: "kafka:9092",
     lastChecked: "Just now",
+    details: { version: "Apache Kafka 3.7", connections: 45, threadPool: "Netty IO Processors", p95Latency: "128ms" },
   },
 ];
 
@@ -150,14 +166,33 @@ export default function HealthPage() {
   const [services, setServices] = useState<ServiceHealth[]>(initialServices);
   const [incidents, setIncidents] = useState<Incident[]>(initialIncidents);
   const [probing, setProbing] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [expandedService, setExpandedService] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
   const [customUrl, setCustomUrl] = useState("https://api.github.com/zen");
+  const [customMethod, setCustomMethod] = useState("GET");
   const [customProbeResult, setCustomProbeResult] = useState<{
     status?: number;
     latency?: number;
     body?: string;
     loading?: boolean;
   } | null>(null);
+
+  // Auto-refresh ticker simulation
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(() => {
+      setServices((prev) =>
+        prev.map((s) => ({
+          ...s,
+          latencyMs: Math.max(1, Math.round(s.latencyMs + (Math.random() * 6 - 3))),
+          cpuPercent: Math.min(95, Math.max(10, Math.round(s.cpuPercent + (Math.random() * 8 - 4)))),
+          lastChecked: "Just now",
+        }))
+      );
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
 
   const handleRefreshAll = () => {
     setProbing(true);
@@ -172,7 +207,7 @@ export default function HealthPage() {
       );
       setProbing(false);
       toast.success("Health probes refreshed", {
-        description: "All 6 services reported active telemetry status.",
+        description: "All registered microservices reported active telemetry status.",
       });
     }, 600);
   };
@@ -182,13 +217,13 @@ export default function HealthPage() {
     setCustomProbeResult({ loading: true });
     const startTime = performance.now();
     try {
-      const res = await fetch(customUrl, { method: "GET" });
+      const res = await fetch(customUrl, { method: customMethod });
       const elapsed = Math.round(performance.now() - startTime);
       const text = await res.text();
       setCustomProbeResult({
         status: res.status,
         latency: elapsed,
-        body: text.slice(0, 300),
+        body: text.slice(0, 400),
         loading: false,
       });
       toast.success(`Probe complete: HTTP ${res.status} in ${elapsed}ms`);
@@ -267,7 +302,12 @@ export default function HealthPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-xs border rounded-md px-2.5 py-1 bg-card">
+            <span className="text-muted-foreground text-[11px]">Auto-Probe:</span>
+            <Switch checked={autoRefresh} onCheckedChange={setAutoRefresh} className="scale-75" />
+          </div>
+
           <Button
             variant="outline"
             size="sm"
@@ -278,14 +318,15 @@ export default function HealthPage() {
             <RefreshCw className={`h-3.5 w-3.5 ${probing ? "animate-spin" : ""}`} />
             {probing ? "Probing..." : "Trigger Probes"}
           </Button>
+
           <Button
             variant="default"
             size="sm"
             onClick={handleExportReport}
-            className="gap-1.5 h-8 text-xs"
+            className="gap-1.5 h-8 text-xs shadow-xs"
           >
             <Download className="h-3.5 w-3.5" />
-            Export Health Report
+            Export Report
           </Button>
         </div>
       </div>
@@ -366,87 +407,126 @@ export default function HealthPage() {
             ))}
           </div>
           <span className="text-xs text-muted-foreground">
-            Showing {filteredServices.length} registered services
+            Showing {filteredServices.length} registered microservices
           </span>
         </div>
 
-        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {filteredServices.map((service) => (
-            <Card key={service.id} className="hover:border-primary/40 transition-colors">
-              <CardHeader className="p-3.5 pb-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    {service.type === "database" ? (
-                      <Database className="h-4 w-4 text-sky-500 shrink-0" />
-                    ) : service.type === "queue" ? (
-                      <Radio className="h-4 w-4 text-purple-500 shrink-0" />
-                    ) : service.type === "gateway" ? (
-                      <Globe className="h-4 w-4 text-indigo-500 shrink-0" />
-                    ) : (
-                      <Server className="h-4 w-4 text-emerald-500 shrink-0" />
-                    )}
-                    <CardTitle className="text-xs font-semibold">{service.name}</CardTitle>
+        <div className="grid gap-3.5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {filteredServices.map((service) => {
+            const isExpanded = expandedService === service.id;
+            return (
+              <Card key={service.id} className="hover:border-primary/40 transition-colors border-border/80 flex flex-col justify-between">
+                <CardHeader className="p-3.5 pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {service.type === "database" ? (
+                        <Database className="h-4 w-4 text-sky-500 shrink-0" />
+                      ) : service.type === "queue" ? (
+                        <Radio className="h-4 w-4 text-purple-500 shrink-0" />
+                      ) : service.type === "gateway" ? (
+                        <Globe className="h-4 w-4 text-indigo-500 shrink-0" />
+                      ) : (
+                        <Server className="h-4 w-4 text-emerald-500 shrink-0" />
+                      )}
+                      <CardTitle className="text-xs font-semibold">{service.name}</CardTitle>
+                    </div>
+                    <Badge
+                      variant={service.status === "healthy" ? "default" : "destructive"}
+                      className="text-[9px] px-1.5 py-0 capitalize"
+                    >
+                      {service.status}
+                    </Badge>
                   </div>
-                  <Badge
-                    variant={service.status === "healthy" ? "default" : "destructive"}
-                    className="text-[9px] px-1.5 py-0 capitalize"
-                  >
-                    {service.status}
-                  </Badge>
-                </div>
-                <CardDescription className="font-mono text-[10px] text-muted-foreground mt-1">
-                  {service.endpoint}
-                </CardDescription>
-              </CardHeader>
+                  <CardDescription className="font-mono text-[10px] text-muted-foreground mt-1">
+                    {service.endpoint}
+                  </CardDescription>
+                </CardHeader>
 
-              <CardContent className="p-3.5 pt-0 space-y-2.5">
-                <Separator />
-                <div className="grid grid-cols-3 gap-2 text-[10px]">
-                  <div>
-                    <span className="text-muted-foreground block">Latency</span>
-                    <span className="font-semibold text-foreground">{service.latencyMs} ms</span>
+                <CardContent className="p-3.5 pt-0 space-y-2.5">
+                  <Separator />
+                  <div className="grid grid-cols-3 gap-2 text-[10px]">
+                    <div>
+                      <span className="text-muted-foreground block">Latency</span>
+                      <span className="font-semibold text-foreground">{service.latencyMs} ms</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground block">CPU Usage</span>
+                      <span className="font-semibold text-foreground">{service.cpuPercent}%</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground block">RAM Usage</span>
+                      <span className="font-semibold text-foreground">{service.memoryMb} MB</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-muted-foreground block">CPU Usage</span>
-                    <span className="font-semibold text-foreground">{service.cpuPercent}%</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">RAM Usage</span>
-                    <span className="font-semibold text-foreground">{service.memoryMb} MB</span>
-                  </div>
-                </div>
 
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t">
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    Uptime {service.uptime}
-                  </span>
-                  <span>{service.lastChecked}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  {/* Expandable Details */}
+                  {isExpanded && service.details && (
+                    <div className="rounded-md bg-muted/40 p-2 text-[10px] space-y-1 font-mono border animate-in fade-in-50">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Runtime:</span>
+                        <span>{service.details.version}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Active Conn:</span>
+                        <span>{service.details.connections}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Thread Model:</span>
+                        <span>{service.details.threadPool}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">p95 Latency:</span>
+                        <span>{service.details.p95Latency}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      Uptime {service.uptime}
+                    </span>
+                    <button
+                      onClick={() => setExpandedService(isExpanded ? null : service.id)}
+                      className="text-primary hover:underline font-medium cursor-pointer"
+                    >
+                      {isExpanded ? "Less ▲" : "Telemetry ▼"}
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
 
       {/* Custom Live Probe Tool */}
       <Card className="border-border/80">
-        <CardHeader className="p-4">
+        <CardHeader className="p-4 pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Globe className="h-4 w-4 text-primary" />
             Custom Endpoint Probe Simulator
           </CardTitle>
           <CardDescription className="text-xs">
-            Send an instant test HTTP probe to any endpoint to verify health and latency
+            Send an instant test HTTP probe to any internal or external service endpoint
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-4 pt-0 space-y-3">
+        <CardContent className="p-4 pt-1 space-y-3">
           <div className="flex flex-col sm:flex-row gap-2">
+            <select
+              value={customMethod}
+              onChange={(e) => setCustomMethod(e.target.value)}
+              className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-bold font-mono"
+            >
+              <option value="GET">GET</option>
+              <option value="HEAD">HEAD</option>
+              <option value="POST">POST</option>
+            </select>
             <Input
               value={customUrl}
               onChange={(e) => setCustomUrl(e.target.value)}
               placeholder="https://your-service.internal/healthz"
-              className="h-8 text-xs font-mono"
+              className="h-8 text-xs font-mono flex-1"
             />
             <Button
               size="sm"
@@ -462,11 +542,11 @@ export default function HealthPage() {
           {customProbeResult && (
             <div className="rounded-lg border bg-neutral-950 p-3 text-xs font-mono space-y-1.5 text-neutral-200">
               <div className="flex items-center justify-between text-[10px] text-neutral-400 border-b border-neutral-800 pb-1">
-                <span>Response Details</span>
+                <span>Probe Response Diagnostics</span>
                 <span>Latency: {customProbeResult.latency} ms</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">HTTP Status:</span>
+                <span className="text-neutral-400">Status:</span>
                 <Badge
                   variant={
                     customProbeResult.status && customProbeResult.status < 400
@@ -475,7 +555,7 @@ export default function HealthPage() {
                   }
                   className="text-[10px]"
                 >
-                  {customProbeResult.status || "Connection Error"}
+                  {customProbeResult.status ? `HTTP ${customProbeResult.status}` : "Network Error"}
                 </Badge>
               </div>
               {customProbeResult.body && (

@@ -17,6 +17,11 @@ import {
   ArrowRight,
   ShieldAlert,
   Search,
+  Zap,
+  Sliders,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface Node {
   id: string;
@@ -32,6 +38,7 @@ interface Node {
   protocol: string;
   qps: number;
   avgLatency: string;
+  errorRate: string;
   dependencies: string[]; // downstream service ids
   status: "healthy" | "degraded";
   x: number;
@@ -46,6 +53,7 @@ const initialNodes: Node[] = [
     protocol: "HTTPS / REST",
     qps: 4200,
     avgLatency: "12ms",
+    errorRate: "0.01%",
     dependencies: ["auth-svc", "order-api", "user-api"],
     status: "healthy",
     x: 80,
@@ -58,6 +66,7 @@ const initialNodes: Node[] = [
     protocol: "gRPC",
     qps: 1800,
     avgLatency: "8ms",
+    errorRate: "0.00%",
     dependencies: ["user-db", "redis-cache"],
     status: "healthy",
     x: 280,
@@ -70,6 +79,7 @@ const initialNodes: Node[] = [
     protocol: "gRPC / HTTP",
     qps: 1250,
     avgLatency: "24ms",
+    errorRate: "0.02%",
     dependencies: ["order-db", "kafka-broker", "payment-worker"],
     status: "healthy",
     x: 280,
@@ -82,6 +92,7 @@ const initialNodes: Node[] = [
     protocol: "REST",
     qps: 950,
     avgLatency: "15ms",
+    errorRate: "0.00%",
     dependencies: ["user-db", "redis-cache"],
     status: "healthy",
     x: 280,
@@ -94,6 +105,7 @@ const initialNodes: Node[] = [
     protocol: "Kafka Consumer",
     qps: 450,
     avgLatency: "85ms",
+    errorRate: "0.05%",
     dependencies: ["order-db", "kafka-broker"],
     status: "healthy",
     x: 480,
@@ -106,6 +118,7 @@ const initialNodes: Node[] = [
     protocol: "Kafka Protocol",
     qps: 8900,
     avgLatency: "4ms",
+    errorRate: "0.12%",
     dependencies: [],
     status: "degraded",
     x: 680,
@@ -118,6 +131,7 @@ const initialNodes: Node[] = [
     protocol: "PostgreSQL Wire",
     qps: 3200,
     avgLatency: "3ms",
+    errorRate: "0.00%",
     dependencies: [],
     status: "healthy",
     x: 680,
@@ -130,6 +144,7 @@ const initialNodes: Node[] = [
     protocol: "PostgreSQL Wire",
     qps: 1800,
     avgLatency: "2.8ms",
+    errorRate: "0.00%",
     dependencies: [],
     status: "healthy",
     x: 680,
@@ -142,6 +157,7 @@ const initialNodes: Node[] = [
     protocol: "RESP3",
     qps: 12400,
     avgLatency: "0.8ms",
+    errorRate: "0.00%",
     dependencies: [],
     status: "healthy",
     x: 680,
@@ -154,6 +170,7 @@ export default function DependenciesPage() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>("order-api");
   const [filterTier, setFilterTier] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
 
@@ -167,12 +184,9 @@ export default function DependenciesPage() {
     ? nodes.filter((n) => selectedNode.dependencies.includes(n.id))
     : [];
 
-  // Blast Radius: direct + transitive downstream or affected
-  const blastRadiusCount = upstreamCallers.length + downstreamTargets.length;
-
   const handleExportTopology = () => {
     const topology = {
-      version: "1.0",
+      version: "2.0",
       generatedAt: new Date().toISOString(),
       nodes: nodes.map((n) => ({
         id: n.id,
@@ -181,14 +195,16 @@ export default function DependenciesPage() {
         dependencies: n.dependencies,
         qps: n.qps,
         latency: n.avgLatency,
+        errorRate: n.errorRate,
       })),
       circularDependencies: false,
+      blastRadiusMaxTier: 3,
     };
     const blob = new Blob([JSON.stringify(topology, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `dependency-topology-${Date.now()}.json`;
+    a.download = `dependency-topology-v2-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
     toast.success("Dependency topology exported as JSON");
@@ -206,13 +222,13 @@ export default function DependenciesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500">
               <Network className="h-4.5 w-4.5" />
             </div>
             <h1 className="text-xl md:text-2xl font-bold tracking-tight">
               Service Dependency Visualizer
             </h1>
-            <Badge variant="outline" className="text-[10px]">
+            <Badge variant="outline" className="text-[10px] text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/20">
               {nodes.length} Nodes Mapped
             </Badge>
           </div>
@@ -232,9 +248,9 @@ export default function DependenciesPage() {
             Export Blueprint
           </Button>
           <Link href="/create">
-            <Button size="sm" className="gap-1.5 h-8 text-xs">
+            <Button size="sm" className="gap-1.5 h-8 text-xs shadow-xs">
               <Server className="h-3.5 w-3.5" />
-              Register New Service
+              Register Service
             </Button>
           </Link>
         </div>
@@ -242,31 +258,31 @@ export default function DependenciesPage() {
 
       {/* Stats Summary Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card>
+        <Card className="border-border/70">
           <CardContent className="p-3.5">
-            <span className="text-xs text-muted-foreground">Total Services</span>
-            <div className="mt-1 text-xl font-bold">{nodes.length} Microservices</div>
+            <span className="text-xs text-muted-foreground">Total Microservices</span>
+            <div className="mt-1 text-xl font-bold">{nodes.length} Services</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-border/70">
           <CardContent className="p-3.5">
             <span className="text-xs text-muted-foreground">Total Connections</span>
             <div className="mt-1 text-xl font-bold">
-              {nodes.reduce((acc, n) => acc + n.dependencies.length, 0)} Edges
+              {nodes.reduce((acc, n) => acc + n.dependencies.length, 0)} Active Edges
             </div>
           </CardContent>
         </Card>
         <Card className="border-emerald-500/20 bg-emerald-500/5">
           <CardContent className="p-3.5">
-            <span className="text-xs text-muted-foreground">Circular Dependencies</span>
+            <span className="text-xs text-muted-foreground">Circular Loops</span>
             <div className="mt-1 text-xl font-bold text-emerald-600 dark:text-emerald-400">
-              0 (Clean DAG)
+              0 Cycles (Clean DAG)
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-border/70">
           <CardContent className="p-3.5">
-            <span className="text-xs text-muted-foreground">Max Depth</span>
+            <span className="text-xs text-muted-foreground">Maximum Depth</span>
             <div className="mt-1 text-xl font-bold">3 Tiers</div>
           </CardContent>
         </Card>
@@ -275,7 +291,7 @@ export default function DependenciesPage() {
       {/* Main Interactive Diagram & Inspection Panel */}
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         {/* Visual Map */}
-        <Card className="flex flex-col min-h-[460px] overflow-hidden border-border/80">
+        <Card className="flex flex-col min-h-[460px] overflow-hidden border-border/80 shadow-xs">
           <div className="flex items-center justify-between border-b p-3 bg-muted/20">
             <div className="flex items-center gap-2 flex-wrap">
               {["all", "gateway", "api", "worker", "data"].map((tier) => (
@@ -290,121 +306,154 @@ export default function DependenciesPage() {
                 </Button>
               ))}
             </div>
-            <div className="relative w-40 sm:w-52">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Filter node..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-7 text-xs pl-8"
-              />
+
+            <div className="flex items-center gap-2">
+              <div className="relative w-36 sm:w-48">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Filter node..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-7 text-xs pl-8"
+                />
+              </div>
+
+              <div className="flex items-center border rounded-md bg-background p-0.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setZoomLevel((z) => Math.max(0.8, z - 0.1))}
+                  className="h-6 w-6 p-0"
+                >
+                  <ZoomOut className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setZoomLevel(1)}
+                  className="h-6 px-1.5 text-[10px] font-mono"
+                >
+                  {Math.round(zoomLevel * 100)}%
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setZoomLevel((z) => Math.min(1.4, z + 0.1))}
+                  className="h-6 w-6 p-0"
+                >
+                  <ZoomIn className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
           </div>
 
           <div className="flex-1 p-4 bg-muted/5 relative overflow-auto">
             {/* SVG Diagram Rendering */}
-            <svg className="w-full min-w-[700px] h-[400px]" viewBox="0 0 820 420">
-              <defs>
-                <marker
-                  id="arrow"
-                  viewBox="0 0 10 10"
-                  refX="18"
-                  refY="5"
-                  markerWidth="6"
-                  markerHeight="6"
-                  orient="auto-start-reverse"
-                >
-                  <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" className="text-muted-foreground/60" />
-                </marker>
-                <marker
-                  id="arrow-active"
-                  viewBox="0 0 10 10"
-                  refX="18"
-                  refY="5"
-                  markerWidth="6"
-                  markerHeight="6"
-                  orient="auto-start-reverse"
-                >
-                  <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" className="text-primary" />
-                </marker>
-              </defs>
-
-              {/* Render Lines */}
-              {nodes.map((source) =>
-                source.dependencies.map((targetId) => {
-                  const target = nodes.find((n) => n.id === targetId);
-                  if (!target) return null;
-                  const isHighlighted =
-                    selectedNodeId === source.id || selectedNodeId === target.id;
-                  return (
-                    <line
-                      key={`${source.id}->${target.id}`}
-                      x1={source.x + 60}
-                      y1={source.y + 20}
-                      x2={target.x + 60}
-                      y2={target.y + 20}
-                      stroke="currentColor"
-                      strokeWidth={isHighlighted ? 2.5 : 1.2}
-                      strokeDasharray={source.tier === "worker" ? "4,4" : undefined}
-                      className={
-                        isHighlighted
-                          ? "text-primary transition-all duration-300"
-                          : "text-muted-foreground/30"
-                      }
-                      markerEnd={isHighlighted ? "url(#arrow-active)" : "url(#arrow)"}
-                    />
-                  );
-                })
-              )}
-
-              {/* Render Nodes as SVG Foreign Objects */}
-              {nodes.map((node) => {
-                const isSelected = selectedNodeId === node.id;
-                const isUpstream = selectedNode?.dependencies.includes(node.id);
-                const isDownstream = node.dependencies.includes(selectedNodeId || "");
-
-                return (
-                  <g
-                    key={node.id}
-                    transform={`translate(${node.x}, ${node.y})`}
-                    onClick={() => setSelectedNodeId(node.id)}
-                    className="cursor-pointer"
+            <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: "top left" }} className="transition-transform duration-150">
+              <svg className="w-full min-w-[700px] h-[400px]" viewBox="0 0 820 420">
+                <defs>
+                  <marker
+                    id="arrow"
+                    viewBox="0 0 10 10"
+                    refX="18"
+                    refY="5"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto-start-reverse"
                   >
-                    <rect
-                      width="130"
-                      height="46"
-                      rx="8"
-                      className={`transition-all duration-200 ${
-                        isSelected
-                          ? "fill-primary text-primary-foreground stroke-2 stroke-primary shadow-lg"
-                          : isUpstream || isDownstream
-                          ? "fill-primary/10 stroke-primary stroke-1"
-                          : "fill-card stroke-border hover:stroke-primary/50"
-                      }`}
-                    />
-                    <text
-                      x="10"
-                      y="20"
-                      className={`text-[11px] font-semibold select-none ${
-                        isSelected ? "fill-primary-foreground" : "fill-foreground"
-                      }`}
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" className="text-muted-foreground/60" />
+                  </marker>
+                  <marker
+                    id="arrow-active"
+                    viewBox="0 0 10 10"
+                    refX="18"
+                    refY="5"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" className="text-primary" />
+                  </marker>
+                </defs>
+
+                {/* Render Lines */}
+                {nodes.map((source) =>
+                  source.dependencies.map((targetId) => {
+                    const target = nodes.find((n) => n.id === targetId);
+                    if (!target) return null;
+                    const isHighlighted =
+                      selectedNodeId === source.id || selectedNodeId === target.id;
+                    return (
+                      <line
+                        key={`${source.id}->${target.id}`}
+                        x1={source.x + 60}
+                        y1={source.y + 20}
+                        x2={target.x + 60}
+                        y2={target.y + 20}
+                        stroke="currentColor"
+                        strokeWidth={isHighlighted ? 2.5 : 1.2}
+                        strokeDasharray={source.tier === "worker" ? "4,4" : undefined}
+                        className={
+                          isHighlighted
+                            ? "text-primary transition-all duration-300"
+                            : "text-muted-foreground/30"
+                        }
+                        markerEnd={isHighlighted ? "url(#arrow-active)" : "url(#arrow)"}
+                      />
+                    );
+                  })
+                )}
+
+                {/* Render Nodes */}
+                {nodes.map((node) => {
+                  const isSelected = selectedNodeId === node.id;
+                  const isUpstream = selectedNode?.dependencies.includes(node.id);
+                  const isDownstream = node.dependencies.includes(selectedNodeId || "");
+
+                  return (
+                    <g
+                      key={node.id}
+                      transform={`translate(${node.x}, ${node.y})`}
+                      onClick={() => setSelectedNodeId(node.id)}
+                      className="cursor-pointer"
                     >
-                      {node.name.length > 15 ? node.name.slice(0, 14) + "…" : node.name}
-                    </text>
-                    <text
-                      x="10"
-                      y="35"
-                      className={`text-[9px] select-none capitalize ${
-                        isSelected ? "fill-primary-foreground/80" : "fill-muted-foreground"
-                      }`}
-                    >
-                      {node.tier} • {node.protocol.split(" ")[0]}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
+                      <rect
+                        width="130"
+                        height="46"
+                        rx="8"
+                        className={`transition-all duration-200 ${
+                          isSelected
+                            ? "fill-primary text-primary-foreground stroke-2 stroke-primary shadow-lg"
+                            : isUpstream || isDownstream
+                            ? "fill-primary/10 stroke-primary stroke-1"
+                            : "fill-card stroke-border hover:stroke-primary/50"
+                        }`}
+                      />
+                      <text
+                        x="10"
+                        y="20"
+                        className={`text-[11px] font-semibold select-none ${
+                          isSelected ? "fill-primary-foreground" : "fill-foreground"
+                        }`}
+                      >
+                        {node.name.length > 15 ? node.name.slice(0, 14) + "…" : node.name}
+                      </text>
+                      <text
+                        x="10"
+                        y="35"
+                        className={`text-[9px] select-none capitalize ${
+                          isSelected ? "fill-primary-foreground/80" : "fill-muted-foreground"
+                        }`}
+                      >
+                        {node.tier} • {node.protocol.split(" ")[0]}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
           </div>
+
           <div className="p-2.5 border-t bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
             <span>Click any node in the topology to inspect its connections and blast radius</span>
             <div className="flex items-center gap-3">
@@ -450,9 +499,13 @@ export default function DependenciesPage() {
                   <span className="text-muted-foreground block text-[10px]">Avg Latency</span>
                   <span className="font-semibold">{selectedNode.avgLatency}</span>
                 </div>
-                <div className="col-span-2">
-                  <span className="text-muted-foreground block text-[10px]">Communication Protocol</span>
-                  <span className="font-semibold font-mono text-[11px]">{selectedNode.protocol}</span>
+                <div>
+                  <span className="text-muted-foreground block text-[10px]">Error Rate</span>
+                  <span className="font-semibold font-mono text-emerald-500">{selectedNode.errorRate}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px]">Protocol</span>
+                  <span className="font-semibold font-mono text-[10px] truncate">{selectedNode.protocol}</span>
                 </div>
               </div>
 
@@ -482,7 +535,7 @@ export default function DependenciesPage() {
                       <button
                         key={dep.id}
                         onClick={() => setSelectedNodeId(dep.id)}
-                        className="w-full flex items-center justify-between p-1.5 rounded-md border text-left text-xs hover:bg-accent transition-colors"
+                        className="w-full flex items-center justify-between p-1.5 rounded-md border text-left text-xs hover:bg-accent transition-colors cursor-pointer"
                       >
                         <span className="font-medium truncate">{dep.name}</span>
                         <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
@@ -505,7 +558,7 @@ export default function DependenciesPage() {
                       <button
                         key={caller.id}
                         onClick={() => setSelectedNodeId(caller.id)}
-                        className="w-full flex items-center justify-between p-1.5 rounded-md border text-left text-xs hover:bg-accent transition-colors"
+                        className="w-full flex items-center justify-between p-1.5 rounded-md border text-left text-xs hover:bg-accent transition-colors cursor-pointer"
                       >
                         <span className="font-medium truncate">{caller.name}</span>
                         <Badge variant="outline" className="text-[8px] font-mono">

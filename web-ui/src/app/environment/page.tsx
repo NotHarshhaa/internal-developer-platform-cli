@@ -19,6 +19,8 @@ import {
   Globe,
   Radio,
   Layers,
+  Activity,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,25 +32,25 @@ interface ClusterNode {
   name: string;
   role: "control-plane" | "worker";
   status: "Ready" | "NotReady";
-  cpuUsage: string;
-  memoryUsage: string;
+  cpuPercent: number;
+  memoryPercent: number;
   version: string;
   podsCount: number;
 }
 
 const envNodes: Record<string, ClusterNode[]> = {
   production: [
-    { name: "k8s-master-01", role: "control-plane", status: "Ready", cpuUsage: "34%", memoryUsage: "62%", version: "v1.31.1", podsCount: 28 },
-    { name: "k8s-worker-01", role: "worker", status: "Ready", cpuUsage: "58%", memoryUsage: "74%", version: "v1.31.1", podsCount: 42 },
-    { name: "k8s-worker-02", role: "worker", status: "Ready", cpuUsage: "52%", memoryUsage: "68%", version: "v1.31.1", podsCount: 39 },
-    { name: "k8s-worker-03", role: "worker", status: "Ready", cpuUsage: "46%", memoryUsage: "59%", version: "v1.31.1", podsCount: 35 },
+    { name: "k8s-master-01", role: "control-plane", status: "Ready", cpuPercent: 34, memoryPercent: 62, version: "v1.31.1", podsCount: 28 },
+    { name: "k8s-worker-01", role: "worker", status: "Ready", cpuPercent: 58, memoryPercent: 74, version: "v1.31.1", podsCount: 42 },
+    { name: "k8s-worker-02", role: "worker", status: "Ready", cpuPercent: 52, memoryPercent: 68, version: "v1.31.1", podsCount: 39 },
+    { name: "k8s-worker-03", role: "worker", status: "Ready", cpuPercent: 46, memoryPercent: 59, version: "v1.31.1", podsCount: 35 },
   ],
   staging: [
-    { name: "stg-control-01", role: "control-plane", status: "Ready", cpuUsage: "22%", memoryUsage: "45%", version: "v1.31.1", podsCount: 16 },
-    { name: "stg-worker-01", role: "worker", status: "Ready", cpuUsage: "36%", memoryUsage: "51%", version: "v1.31.1", podsCount: 22 },
+    { name: "stg-control-01", role: "control-plane", status: "Ready", cpuPercent: 22, memoryPercent: 45, version: "v1.31.1", podsCount: 16 },
+    { name: "stg-worker-01", role: "worker", status: "Ready", cpuPercent: 36, memoryPercent: 51, version: "v1.31.1", podsCount: 22 },
   ],
   development: [
-    { name: "dev-minikube-local", role: "worker", status: "Ready", cpuUsage: "28%", memoryUsage: "40%", version: "v1.31.0", podsCount: 12 },
+    { name: "dev-minikube-local", role: "worker", status: "Ready", cpuPercent: 28, memoryPercent: 40, version: "v1.31.0", podsCount: 12 },
   ],
 };
 
@@ -71,15 +73,15 @@ export default function EnvironmentPage() {
     setRunningDiag(true);
     setDiagLog([]);
     const logs = [
-      `[INFO] Initializing cluster environment check for "${selectedEnv}"...`,
-      `[INFO] Connecting to API server at https://${selectedEnv}.k8s.internal:6443...`,
-      `[PASS] Kubernetes API Server v1.31.1 is responsive (latency: 12ms)`,
-      `[PASS] Node status: ${currentNodes.length}/${currentNodes.length} nodes in 'Ready' state`,
-      `[PASS] CoreDNS pods (kube-system) responding on 10.96.0.10:53`,
-      `[PASS] Ingress controller nginx-ingress active on ports 80/443`,
-      `[PASS] StorageClass 'standard-gp3' available with dynamic CSI provisioner`,
-      `[PASS] Container runtime containerd://1.7.20 healthy across all nodes`,
-      `[SUCCESS] Environment "${selectedEnv}" passed all 8 readiness and security gates.`,
+      `[12:00:01] \x1b[36mℹ Initializing cluster environment check for "${selectedEnv}"...\x1b[0m`,
+      `[12:00:01] \x1b[36mℹ Connecting to API server at https://${selectedEnv}.k8s.internal:6443...\x1b[0m`,
+      `[12:00:02] \x1b[32m✔ [PASS]\x1b[0m Kubernetes API Server v1.31.1 is responsive (latency: 12ms)`,
+      `[12:00:02] \x1b[32m✔ [PASS]\x1b[0m Node status: ${currentNodes.length}/${currentNodes.length} nodes in 'Ready' state`,
+      `[12:00:03] \x1b[32m✔ [PASS]\x1b[0m CoreDNS pods (kube-system) responding on 10.96.0.10:53`,
+      `[12:00:03] \x1b[32m✔ [PASS]\x1b[0m Ingress controller nginx-ingress active on ports 80/443`,
+      `[12:00:04] \x1b[32m✔ [PASS]\x1b[0m StorageClass 'standard-gp3' available with dynamic CSI provisioner`,
+      `[12:00:04] \x1b[32m✔ [PASS]\x1b[0m Container runtime containerd://1.7.20 healthy across all nodes`,
+      `[12:00:05] \x1b[1;32m🎉 Success!\x1b[0m Environment "${selectedEnv}" passed all 8 readiness and security gates.`,
     ];
 
     logs.forEach((line, idx) => {
@@ -91,7 +93,7 @@ export default function EnvironmentPage() {
             description: `All ${currentNodes.length} cluster nodes and components passed health checks.`,
           });
         }
-      }, (idx + 1) * 180);
+      }, (idx + 1) * 160);
     });
   };
 
@@ -110,7 +112,7 @@ export default function EnvironmentPage() {
     a.download = `env-status-${selectedEnv}-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
-    toast.success("Environment status exported");
+    toast.success("Environment status exported as JSON");
   };
 
   return (
@@ -136,7 +138,7 @@ export default function EnvironmentPage() {
 
         {/* Environment Switcher Tabs */}
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border bg-muted/30 p-0.5">
+          <div className="flex rounded-lg border bg-muted/30 p-0.5 shadow-xs">
             {(["production", "staging", "development"] as const).map((env) => (
               <Button
                 key={env}
@@ -166,27 +168,27 @@ export default function EnvironmentPage() {
 
       {/* Cluster KPI Overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card>
+        <Card className="border-border/70">
           <CardContent className="p-3.5">
             <span className="text-xs text-muted-foreground">Cluster Nodes</span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-xl font-bold">{currentNodes.length}</span>
+              <span className="text-xl font-bold">{currentNodes.length} Nodes</span>
               <span className="text-[10px] text-emerald-500">All Ready</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border/70">
           <CardContent className="p-3.5">
             <span className="text-xs text-muted-foreground">Active Pods</span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-xl font-bold">{totalPods}</span>
+              <span className="text-xl font-bold">{totalPods} Pods</span>
               <span className="text-[10px] text-muted-foreground">Across namespaces</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border/70">
           <CardContent className="p-3.5">
             <span className="text-xs text-muted-foreground">Kubernetes Version</span>
             <div className="mt-1 flex items-baseline gap-2">
@@ -207,8 +209,8 @@ export default function EnvironmentPage() {
         </Card>
       </div>
 
-      {/* Kubernetes Node Table */}
-      <Card>
+      {/* Kubernetes Node Table with Visual Resource Bars */}
+      <Card className="border-border/80 shadow-xs">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-sm flex items-center justify-between">
             <span className="flex items-center gap-2">
@@ -231,8 +233,8 @@ export default function EnvironmentPage() {
                   <th className="py-2 font-medium">Node Name</th>
                   <th className="py-2 font-medium">Role</th>
                   <th className="py-2 font-medium">Status</th>
-                  <th className="py-2 font-medium">CPU Alloc</th>
-                  <th className="py-2 font-medium">Memory Alloc</th>
+                  <th className="py-2 font-medium">CPU Utilization</th>
+                  <th className="py-2 font-medium">Memory Allocation</th>
                   <th className="py-2 font-medium">Pods</th>
                   <th className="py-2 font-medium">K8s Version</th>
                 </tr>
@@ -247,8 +249,28 @@ export default function EnvironmentPage() {
                         {node.status}
                       </Badge>
                     </td>
-                    <td className="py-2.5 font-mono">{node.cpuUsage}</td>
-                    <td className="py-2.5 font-mono">{node.memoryUsage}</td>
+                    <td className="py-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-20 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-sky-500 rounded-full"
+                            style={{ width: `${node.cpuPercent}%` }}
+                          />
+                        </div>
+                        <span className="font-mono text-[10px]">{node.cpuPercent}%</span>
+                      </div>
+                    </td>
+                    <td className="py-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-20 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full bg-indigo-500 rounded-full"
+                            style={{ width: `${node.memoryPercent}%` }}
+                          />
+                        </div>
+                        <span className="font-mono text-[10px]">{node.memoryPercent}%</span>
+                      </div>
+                    </td>
                     <td className="py-2.5 font-semibold">{node.podsCount} pods</td>
                     <td className="py-2.5 font-mono text-muted-foreground">{node.version}</td>
                   </tr>
@@ -261,7 +283,7 @@ export default function EnvironmentPage() {
 
       {/* Cloud Regions & Latency */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="border-border/80">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Cloud className="h-4 w-4 text-sky-500" />
@@ -293,7 +315,7 @@ export default function EnvironmentPage() {
         </Card>
 
         {/* Diagnostic Command Runner */}
-        <Card>
+        <Card className="border-border/80">
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm flex items-center gap-2">
@@ -304,7 +326,7 @@ export default function EnvironmentPage() {
                 size="sm"
                 onClick={handleRunDiagnostics}
                 disabled={runningDiag}
-                className="h-7 text-xs gap-1.5"
+                className="h-7 text-xs gap-1.5 shadow-xs"
               >
                 <Play className="h-3 w-3" />
                 {runningDiag ? "Running Check..." : "Run Diagnostics"}
@@ -315,12 +337,20 @@ export default function EnvironmentPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-2">
-            <div className="rounded-lg bg-neutral-950 p-3 font-mono text-[10px] text-green-400 min-h-[160px] max-h-[190px] overflow-y-auto space-y-1">
+            <div className="rounded-lg bg-neutral-950 p-3 font-mono text-[10px] min-h-[160px] max-h-[190px] overflow-y-auto space-y-1 text-neutral-200">
               {diagLog && diagLog.length > 0 ? (
                 diagLog.map((line, idx) => (
-                  <div key={idx} className="leading-relaxed">
-                    {line}
-                  </div>
+                  <div
+                    key={idx}
+                    className="leading-relaxed"
+                    dangerouslySetInnerHTML={{
+                      __html: line
+                        .replace(/\x1b\[32m/g, '<span class="text-emerald-400 font-semibold">')
+                        .replace(/\x1b\[36m/g, '<span class="text-cyan-400">')
+                        .replace(/\x1b\[1;32m/g, '<span class="text-emerald-300 font-bold">')
+                        .replace(/\x1b\[0m/g, "</span>"),
+                    }}
+                  />
                 ))
               ) : (
                 <div className="text-neutral-500 italic py-6 text-center">

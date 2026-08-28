@@ -7,6 +7,7 @@ import {
   Play,
   Copy,
   Check,
+  CheckCheck,
   Sparkles,
   Layers,
   Heart,
@@ -15,6 +16,7 @@ import {
   ShieldCheck,
   Download,
   RotateCcw,
+  Sliders,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -120,29 +122,40 @@ export default function PlaygroundPage() {
   const [running, setRunning] = useState(false);
   const [terminalLines, setTerminalLines] = useState<string[]>(presets[0].simulatedOutput);
 
+  // Custom Command Builder state
+  const [builderService, setBuilderService] = useState("auth-gateway");
+  const [builderTemplate, setBuilderTemplate] = useState("python-api");
+  const [builderCi, setBuilderCi] = useState("github-actions");
+  const [builderDeploy, setBuilderDeploy] = useState("kubernetes");
+  const [builderDocker, setBuilderDocker] = useState(true);
+  const [builderK8s, setBuilderK8s] = useState(true);
+  const [builderMonitoring, setBuilderMonitoring] = useState(true);
+
+  const customBuiltCommand = `idp create ${builderService} --template ${builderTemplate} --ci ${builderCi} --deploy ${builderDeploy} ${builderDocker ? "--docker" : ""} ${builderK8s ? "--k8s" : ""} ${builderMonitoring ? "--monitoring" : ""}`.replace(/\s+/g, " ").trim();
+
   const handleSelectPreset = (preset: CommandPreset) => {
     setSelectedPreset(preset);
     setTerminalLines(preset.simulatedOutput);
   };
 
-  const handleCopyCommand = () => {
-    navigator.clipboard.writeText(selectedPreset.command);
+  const handleCopyCommand = (cmd: string) => {
+    navigator.clipboard.writeText(cmd);
     setCopied(true);
     toast.success("Command copied to clipboard");
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleRunCommand = () => {
+  const handleRunCommand = (output: string[]) => {
     setRunning(true);
     setTerminalLines([`$ ${selectedPreset.command}`]);
 
-    selectedPreset.simulatedOutput.forEach((line, idx) => {
+    output.forEach((line, idx) => {
       setTimeout(() => {
         setTerminalLines((prev) => [...prev, line]);
-        if (idx === selectedPreset.simulatedOutput.length - 1) {
+        if (idx === output.length - 1) {
           setRunning(false);
         }
-      }, (idx + 1) * 200);
+      }, (idx + 1) * 180);
     });
   };
 
@@ -158,7 +171,7 @@ export default function PlaygroundPage() {
             <h1 className="text-xl md:text-2xl font-bold tracking-tight">
               Interactive CLI Command Playground
             </h1>
-            <Badge variant="outline" className="text-[10px]">
+            <Badge variant="outline" className="text-[10px] text-primary bg-primary/5 border-primary/20">
               Terminal Emulator
             </Badge>
           </div>
@@ -177,7 +190,7 @@ export default function PlaygroundPage() {
       {/* Preset Selector Bar */}
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Command Presets & Scenarios
+          Command Scenarios & Recipes
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
           {presets.map((preset) => (
@@ -185,8 +198,8 @@ export default function PlaygroundPage() {
               key={preset.id}
               className={`cursor-pointer transition-all hover:border-primary/50 ${
                 selectedPreset.id === preset.id
-                  ? "ring-2 ring-primary border-primary bg-primary/5"
-                  : ""
+                  ? "ring-2 ring-primary border-primary bg-primary/5 shadow-xs"
+                  : "border-border/70"
               }`}
               onClick={() => handleSelectPreset(preset)}
             >
@@ -211,87 +224,166 @@ export default function PlaygroundPage() {
         </div>
       </div>
 
-      {/* Command Builder & Terminal Output */}
-      <div className="space-y-4">
-        {/* Command Display Bar */}
+      {/* Interactive Command Builder & Terminal Output */}
+      <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
+        {/* Left: Custom Flag Builder */}
         <Card className="border-border/80">
-          <CardHeader className="p-3.5 pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xs font-semibold flex items-center gap-2">
-                <Terminal className="h-3.5 w-3.5 text-primary" />
-                Generated CLI Command
-              </CardTitle>
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopyCommand}
-                  className="h-7 text-xs gap-1.5"
-                >
-                  {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-                  {copied ? "Copied!" : "Copy Command"}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleRunCommand}
-                  disabled={running}
-                  className="h-7 text-xs gap-1.5"
-                >
-                  <Play className="h-3 w-3" />
-                  {running ? "Simulating..." : "Simulate Run"}
-                </Button>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-xs font-bold flex items-center gap-2">
+              <Sliders className="h-3.5 w-3.5 text-primary" />
+              Interactive Flag Builder
+            </CardTitle>
+            <CardDescription className="text-[11px]">
+              Tweak flags to generate custom CLI commands
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-1 space-y-3">
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground">Service Name</Label>
+              <Input
+                value={builderService}
+                onChange={(e) => setBuilderService(e.target.value)}
+                className="h-7.5 text-xs font-mono"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground">Template</Label>
+              <select
+                value={builderTemplate}
+                onChange={(e) => setBuilderTemplate(e.target.value)}
+                className="w-full h-7.5 rounded-md border border-input bg-background px-2 text-xs font-mono"
+              >
+                <option value="python-api">python-api (FastAPI)</option>
+                <option value="node-api">node-api (Express)</option>
+                <option value="go-api">go-api (Gin)</option>
+                <option value="rust-api">rust-api (Axum)</option>
+                <option value="nextjs-fullstack">nextjs-fullstack</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-[10px] text-muted-foreground">CI/CD Provider</Label>
+              <select
+                value={builderCi}
+                onChange={(e) => setBuilderCi(e.target.value)}
+                className="w-full h-7.5 rounded-md border border-input bg-background px-2 text-xs"
+              >
+                <option value="github-actions">github-actions</option>
+                <option value="gitlab-ci">gitlab-ci</option>
+                <option value="jenkins">jenkins</option>
+              </select>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span>--docker</span>
+                <Switch checked={builderDocker} onCheckedChange={setBuilderDocker} className="scale-75" />
+              </div>
+              <div className="flex items-center justify-between">
+                <span>--k8s</span>
+                <Switch checked={builderK8s} onCheckedChange={setBuilderK8s} className="scale-75" />
+              </div>
+              <div className="flex items-center justify-between">
+                <span>--monitoring</span>
+                <Switch checked={builderMonitoring} onCheckedChange={setBuilderMonitoring} className="scale-75" />
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-3.5 pt-1">
-            <div className="rounded-lg bg-muted/40 p-2.5 font-mono text-xs text-foreground border overflow-x-auto select-all">
-              <span className="text-primary font-bold">$ </span>
-              {selectedPreset.command}
-            </div>
+
+            <Button
+              size="sm"
+              onClick={() => handleCopyCommand(customBuiltCommand)}
+              className="w-full text-xs h-7.5 gap-1.5 mt-2"
+            >
+              <Copy className="h-3 w-3" />
+              Copy Built Command
+            </Button>
           </CardContent>
         </Card>
 
-        {/* Live Terminal Output Emulator */}
-        <Card className="overflow-hidden border-neutral-800 shadow-xl bg-neutral-950 text-neutral-100">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-800 bg-neutral-900/80">
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-red-500/80" />
-              <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-              <div className="h-3 w-3 rounded-full bg-green-500/80" />
-              <span className="ml-2 text-[11px] font-mono text-neutral-400">
-                idp-terminal — bash
-              </span>
-            </div>
-            <Badge variant="outline" className="text-[9px] font-mono text-neutral-400 border-neutral-700">
-              Rich TUI
-            </Badge>
-          </div>
-
-          <div className="p-4 font-mono text-xs min-h-[220px] max-h-[340px] overflow-y-auto space-y-1.5 leading-relaxed">
-            {terminalLines.map((line, idx) => (
-              <div
-                key={idx}
-                className="text-neutral-200"
-                dangerouslySetInnerHTML={{
-                  __html: line
-                    .replace(/\x1b\[32m/g, '<span class="text-emerald-400 font-semibold">')
-                    .replace(/\x1b\[36m/g, '<span class="text-cyan-400">')
-                    .replace(/\x1b\[33m/g, '<span class="text-amber-400">')
-                    .replace(/\x1b\[34m/g, '<span class="text-sky-400 font-medium">')
-                    .replace(/\x1b\[35m/g, '<span class="text-purple-400 font-medium">')
-                    .replace(/\x1b\[1;32m/g, '<span class="text-emerald-300 font-bold">')
-                    .replace(/\x1b\[0m/g, "</span>"),
-                }}
-              />
-            ))}
-            {running && (
-              <div className="flex items-center gap-2 text-neutral-400 animate-pulse">
-                <span className="inline-block h-3.5 w-2 bg-emerald-400" />
-                <span>Executing idp pipeline...</span>
+        {/* Right: Active Command & Terminal Simulator */}
+        <div className="space-y-3">
+          <Card className="border-border/80">
+            <CardHeader className="p-3.5 pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xs font-semibold flex items-center gap-2">
+                  <Terminal className="h-3.5 w-3.5 text-primary" />
+                  Active CLI Command
+                </CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCopyCommand(selectedPreset.command)}
+                    className="h-7 text-xs gap-1.5"
+                  >
+                    {copied ? <CheckCheck className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                    {copied ? "Copied" : "Copy"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleRunCommand(selectedPreset.simulatedOutput)}
+                    disabled={running}
+                    className="h-7 text-xs gap-1.5 shadow-xs"
+                  >
+                    <Play className="h-3 w-3" />
+                    {running ? "Executing..." : "Simulate Run"}
+                  </Button>
+                </div>
               </div>
-            )}
-          </div>
-        </Card>
+            </CardHeader>
+            <CardContent className="p-3.5 pt-1">
+              <div className="rounded-lg bg-muted/40 p-2.5 font-mono text-xs text-foreground border overflow-x-auto select-all">
+                <span className="text-primary font-bold">$ </span>
+                {selectedPreset.command}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Live Terminal Output Emulator */}
+          <Card className="overflow-hidden border-neutral-800 shadow-xl bg-neutral-950 text-neutral-100">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-800 bg-neutral-900/80">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-red-500/80" />
+                <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
+                <div className="h-3 w-3 rounded-full bg-green-500/80" />
+                <span className="ml-2 text-[11px] font-mono text-neutral-400">
+                  idp-terminal — bash
+                </span>
+              </div>
+              <Badge variant="outline" className="text-[9px] font-mono text-neutral-400 border-neutral-700">
+                Rich TUI
+              </Badge>
+            </div>
+
+            <div className="p-4 font-mono text-xs min-h-[220px] max-h-[300px] overflow-y-auto space-y-1.5 leading-relaxed">
+              {terminalLines.map((line, idx) => (
+                <div
+                  key={idx}
+                  className="text-neutral-200"
+                  dangerouslySetInnerHTML={{
+                    __html: line
+                      .replace(/\x1b\[32m/g, '<span class="text-emerald-400 font-semibold">')
+                      .replace(/\x1b\[36m/g, '<span class="text-cyan-400">')
+                      .replace(/\x1b\[33m/g, '<span class="text-amber-400">')
+                      .replace(/\x1b\[34m/g, '<span class="text-sky-400 font-medium">')
+                      .replace(/\x1b\[35m/g, '<span class="text-purple-400 font-medium">')
+                      .replace(/\x1b\[1;32m/g, '<span class="text-emerald-300 font-bold">')
+                      .replace(/\x1b\[0m/g, "</span>"),
+                  }}
+                />
+              ))}
+              {running && (
+                <div className="flex items-center gap-2 text-neutral-400 animate-pulse">
+                  <span className="inline-block h-3.5 w-2 bg-emerald-400" />
+                  <span>Executing idp pipeline...</span>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
   );

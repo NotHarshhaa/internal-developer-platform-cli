@@ -17,6 +17,8 @@ import {
   Zap,
   Radio,
   Sliders,
+  FileSpreadsheet,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,14 +38,14 @@ export default function CostEstimatorPage() {
   const [redisEnabled, setRedisEnabled] = useState(true);
   const [egressGb, setEgressGb] = useState(250);
   const [useSpotInstances, setUseSpotInstances] = useState(false);
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
 
-  // Total Pods
+  // Total Pods & Sizing
   const totalPods = serviceCount * replicasPerService;
   const totalCores = totalPods * cpuCores;
   const totalMemoryGb = totalPods * memoryGb;
 
-  // Monthly cost calculations (Standard rates)
-  // Compute: ~$28 / vCPU / month, ~$3.50 / GB RAM / month
+  // Monthly compute calculation
   let computeCost = totalCores * 28 + totalMemoryGb * 3.5;
   if (useSpotInstances) {
     computeCost = computeCost * 0.45; // 55% discount
@@ -59,58 +61,73 @@ export default function CostEstimatorPage() {
   // Networking Egress: ~$0.08 per GB
   const networkCost = egressGb * 0.08;
 
-  // EKS / GKE Control plane management fee: $73 / month ($0.10/hr)
+  // EKS / GKE Control plane management fee: $73 / month
   const clusterManagementFee = 73;
 
-  // Total monthly cost
+  // Total Monthly Cost
   const totalMonthlyCost = Math.round(
     computeCost + dbCost + redisCost + networkCost + clusterManagementFee
   );
 
-  // Cloud breakdown comparison
-  const awsCost = totalMonthlyCost;
-  const gcpCost = Math.round(totalMonthlyCost * 0.94); // slightly cheaper sustained use
-  const azureCost = Math.round(totalMonthlyCost * 1.02);
+  const displayTotal =
+    billingPeriod === "annual" ? totalMonthlyCost * 12 : totalMonthlyCost;
 
-  const handleExportCost = () => {
-    const costReport = {
-      timestamp: new Date().toISOString(),
-      parameters: {
-        serviceCount,
-        replicasPerService,
-        totalPods,
-        cpuCoresPerPod: cpuCores,
-        memoryGbPerPod: memoryGb,
-        databaseTier,
-        redisEnabled,
-        egressGb,
-        useSpotInstances,
-      },
-      estimates: {
-        monthlyTotalUsd: totalMonthlyCost,
-        annualTotalUsd: totalMonthlyCost * 12,
-        breakdown: {
-          computeUsd: Math.round(computeCost),
-          databaseUsd: dbCost,
-          redisUsd: redisCost,
-          networkEgressUsd: Math.round(networkCost),
-          clusterManagementUsd: clusterManagementFee,
+  // Cloud comparison
+  const awsCost = displayTotal;
+  const gcpCost = Math.round(displayTotal * 0.94);
+  const azureCost = Math.round(displayTotal * 1.02);
+
+  const handleExportCost = (format: "json" | "csv") => {
+    if (format === "json") {
+      const costReport = {
+        timestamp: new Date().toISOString(),
+        parameters: {
+          serviceCount,
+          replicasPerService,
+          totalPods,
+          cpuCoresPerPod: cpuCores,
+          memoryGbPerPod: memoryGb,
+          databaseTier,
+          redisEnabled,
+          egressGb,
+          useSpotInstances,
         },
-        cloudComparison: {
-          awsUsd: awsCost,
-          gcpUsd: gcpCost,
-          azureUsd: azureCost,
+        estimates: {
+          monthlyTotalUsd: totalMonthlyCost,
+          annualTotalUsd: totalMonthlyCost * 12,
+          breakdown: {
+            computeUsd: Math.round(computeCost),
+            databaseUsd: dbCost,
+            redisUsd: redisCost,
+            networkEgressUsd: Math.round(networkCost),
+            clusterManagementUsd: clusterManagementFee,
+          },
+          cloudComparison: {
+            awsUsd: awsCost,
+            gcpUsd: gcpCost,
+            azureUsd: azureCost,
+          },
         },
-      },
-    };
-    const blob = new Blob([JSON.stringify(costReport, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `cloud-cost-estimate-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    toast.success("Cost estimate exported as JSON");
+      };
+      const blob = new Blob([JSON.stringify(costReport, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `cloud-cost-estimate-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast.success("Cost estimate exported as JSON");
+    } else {
+      const csv = `Item,Monthly Cost (USD),Annual Cost (USD)\nCompute (Kubernetes),${Math.round(computeCost)},${Math.round(computeCost * 12)}\nControl Plane Fee,${clusterManagementFee},${clusterManagementFee * 12}\nManaged Database,${dbCost},${dbCost * 12}\nRedis Cache,${redisCost},${redisCost * 12}\nNetwork Egress,${Math.round(networkCost)},${Math.round(networkCost * 12)}\nTotal,${totalMonthlyCost},${totalMonthlyCost * 12}`;
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `cloud-cost-estimate-${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast.success("Cost estimate exported as CSV");
+    }
   };
 
   return (
@@ -126,30 +143,53 @@ export default function CostEstimatorPage() {
               Cloud Cost & Resource Estimator
             </h1>
             <Badge variant="outline" className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20">
-              Multi-Cloud Calculator
+              FinOps Calculator
             </Badge>
           </div>
           <p className="mt-1 text-xs md:text-sm text-muted-foreground">
-            Estimate monthly infrastructure spending across AWS, GCP, and Azure with right-sizing recommendations
+            Estimate infrastructure spending across AWS, GCP, and Azure with live spot instance discounts and right-sizing
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          <div className="flex rounded-md border bg-muted/30 p-0.5 text-xs">
+            <button
+              onClick={() => setBillingPeriod("monthly")}
+              className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                billingPeriod === "monthly" ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground"
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingPeriod("annual")}
+              className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                billingPeriod === "annual" ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground"
+              }`}
+            >
+              Annual
+            </button>
+          </div>
+
           <Button
             variant="outline"
             size="sm"
-            onClick={handleExportCost}
+            onClick={() => handleExportCost("csv")}
             className="gap-1.5 h-8 text-xs"
           >
-            <Download className="h-3.5 w-3.5" />
-            Export Estimate
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            CSV
           </Button>
-          <Link href="/create">
-            <Button size="sm" className="gap-1.5 h-8 text-xs">
-              <Server className="h-3.5 w-3.5" />
-              Scaffold Service
-            </Button>
-          </Link>
+
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => handleExportCost("json")}
+            className="gap-1.5 h-8 text-xs shadow-xs"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export JSON
+          </Button>
         </div>
       </div>
 
@@ -158,22 +198,26 @@ export default function CostEstimatorPage() {
         <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground font-medium">Estimated Monthly Spend</span>
+              <span className="text-xs text-muted-foreground font-medium">
+                {billingPeriod === "annual" ? "Annual Projected Spend" : "Estimated Monthly Spend"}
+              </span>
               <DollarSign className="h-4 w-4 text-primary" />
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-3xl font-extrabold tracking-tight text-primary">
-                ${totalMonthlyCost.toLocaleString()}
+                ${displayTotal.toLocaleString()}
               </span>
-              <span className="text-xs text-muted-foreground">/ month</span>
+              <span className="text-xs text-muted-foreground">
+                / {billingPeriod === "annual" ? "year" : "month"}
+              </span>
             </div>
             <p className="text-[10px] text-muted-foreground mt-1">
-              Annual projection: ${(totalMonthlyCost * 12).toLocaleString()} / year
+              Baseline compute &bull; Databases &bull; Control plane &bull; Networking
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border/70">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground font-medium">Cluster Pod Density</span>
@@ -192,7 +236,7 @@ export default function CostEstimatorPage() {
         <Card className="border-emerald-500/20 bg-emerald-500/5">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground font-medium">Spot / FinOps Savings</span>
+              <span className="text-xs text-muted-foreground font-medium">FinOps Savings</span>
               <TrendingDown className="h-4 w-4 text-emerald-500" />
             </div>
             <div className="mt-2 flex items-baseline gap-2">
@@ -211,7 +255,7 @@ export default function CostEstimatorPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         {/* Left: Interactive Sliders & Inputs */}
         <div className="space-y-4">
-          <Card>
+          <Card className="border-border/80">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Sliders className="h-4 w-4 text-primary" />
@@ -268,7 +312,7 @@ export default function CostEstimatorPage() {
                     id="cpu"
                     value={cpuCores}
                     onChange={(e) => setCpuCores(parseFloat(e.target.value))}
-                    className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-xs"
+                    className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-xs font-mono"
                   >
                     <option value="0.25">0.25 vCPU (250m - Lightweight)</option>
                     <option value="0.5">0.5 vCPU (500m - Standard API)</option>
@@ -286,7 +330,7 @@ export default function CostEstimatorPage() {
                     id="memory"
                     value={memoryGb}
                     onChange={(e) => setMemoryGb(parseFloat(e.target.value))}
-                    className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-xs"
+                    className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-xs font-mono"
                   >
                     <option value="0.5">512 MB (Minimal)</option>
                     <option value="1">1.0 GB (Standard)</option>
@@ -313,7 +357,7 @@ export default function CostEstimatorPage() {
                       variant={databaseTier === tier.id ? "default" : "outline"}
                       size="sm"
                       onClick={() => setDatabaseTier(tier.id as any)}
-                      className="flex flex-col items-start h-auto p-2.5 text-left"
+                      className="flex flex-col items-start h-auto p-2.5 text-left hover:border-primary/50 cursor-pointer"
                     >
                       <span className="font-semibold text-xs">{tier.label}</span>
                       <span className="text-[10px] opacity-80">{tier.desc}</span>
@@ -348,7 +392,7 @@ export default function CostEstimatorPage() {
 
         {/* Right: Cloud Comparison & Breakdown */}
         <div className="space-y-4">
-          <Card>
+          <Card className="border-border/80">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Cloud className="h-4 w-4 text-sky-500" />
@@ -361,7 +405,9 @@ export default function CostEstimatorPage() {
                   <span className="font-bold text-xs">Amazon Web Services</span>
                   <Badge variant="outline" className="text-[9px]">EKS</Badge>
                 </div>
-                <span className="font-bold text-sm text-foreground">${awsCost} / mo</span>
+                <span className="font-bold text-sm text-foreground">
+                  ${awsCost.toLocaleString()} / {billingPeriod === "annual" ? "yr" : "mo"}
+                </span>
               </div>
 
               <div className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/10">
@@ -369,7 +415,9 @@ export default function CostEstimatorPage() {
                   <span className="font-bold text-xs">Google Cloud Platform</span>
                   <Badge variant="outline" className="text-[9px]">GKE</Badge>
                 </div>
-                <span className="font-bold text-sm text-foreground">${gcpCost} / mo</span>
+                <span className="font-bold text-sm text-foreground">
+                  ${gcpCost.toLocaleString()} / {billingPeriod === "annual" ? "yr" : "mo"}
+                </span>
               </div>
 
               <div className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/10">
@@ -377,7 +425,9 @@ export default function CostEstimatorPage() {
                   <span className="font-bold text-xs">Microsoft Azure</span>
                   <Badge variant="outline" className="text-[9px]">AKS</Badge>
                 </div>
-                <span className="font-bold text-sm text-foreground">${azureCost} / mo</span>
+                <span className="font-bold text-sm text-foreground">
+                  ${azureCost.toLocaleString()} / {billingPeriod === "annual" ? "yr" : "mo"}
+                </span>
               </div>
 
               <Separator />
@@ -385,27 +435,37 @@ export default function CostEstimatorPage() {
               {/* Line items breakdown */}
               <div className="space-y-1.5 text-xs">
                 <p className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
-                  Monthly Cost Breakdown
+                  Cost Breakdown ({billingPeriod})
                 </p>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Kubernetes Compute</span>
-                  <span className="font-mono font-medium">${Math.round(computeCost)}</span>
+                  <span className="font-mono font-medium">
+                    ${(billingPeriod === "annual" ? Math.round(computeCost * 12) : Math.round(computeCost)).toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Cluster Management Fee</span>
-                  <span className="font-mono font-medium">${clusterManagementFee}</span>
+                  <span className="font-mono font-medium">
+                    ${(billingPeriod === "annual" ? clusterManagementFee * 12 : clusterManagementFee).toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Database ({databaseTier})</span>
-                  <span className="font-mono font-medium">${dbCost}</span>
+                  <span className="font-mono font-medium">
+                    ${(billingPeriod === "annual" ? dbCost * 12 : dbCost).toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Redis Cache</span>
-                  <span className="font-mono font-medium">${redisCost}</span>
+                  <span className="font-mono font-medium">
+                    ${(billingPeriod === "annual" ? redisCost * 12 : redisCost).toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Network Egress ({egressGb} GB)</span>
-                  <span className="font-mono font-medium">${Math.round(networkCost)}</span>
+                  <span className="font-mono font-medium">
+                    ${(billingPeriod === "annual" ? Math.round(networkCost * 12) : Math.round(networkCost)).toLocaleString()}
+                  </span>
                 </div>
               </div>
             </CardContent>
