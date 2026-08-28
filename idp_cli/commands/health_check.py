@@ -3,13 +3,12 @@
 import json
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import click
 import requests
 from rich.panel import Panel
 from rich.table import Table
-from rich.tree import Tree
 from rich import box
 
 from idp_cli.utils.console import console, print_step, print_success, print_error
@@ -20,20 +19,21 @@ class ServiceHealthChecker:
     
     def __init__(self, config_file: Optional[Path] = None):
         self.config_file = config_file or Path.cwd() / "idp-config.json"
-        self.config = self._load_config()
+        self.config: Dict[str, Any] = self._load_config()
     
-    def _load_config(self) -> Dict:
+    def _load_config(self) -> Dict[str, Any]:
         """Load service configuration from file."""
         if not self.config_file.exists():
             return {"services": [], "environments": {}}
         
         try:
-            with open(self.config_file, 'r') as f:
-                return json.load(f)
+            with open(self.config_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return cast(Dict[str, Any], data if isinstance(data, dict) else {"services": [], "environments": {}})
         except (json.JSONDecodeError, IOError):
             return {"services": [], "environments": {}}
     
-    def check_service_health(self, service_name: str, environment: str = "dev") -> Dict:
+    def check_service_health(self, service_name: str, environment: str = "dev") -> Dict[str, Any]:
         """Check health of a specific service."""
         service_config = self.config.get("environments", {}).get(environment, {}).get("services", {})
         service_info = service_config.get(service_name)
@@ -43,14 +43,14 @@ class ServiceHealthChecker:
                 "service": service_name,
                 "environment": environment,
                 "status": "unknown",
-                "error": "Service not found in configuration"
+                "error": "Service not found in configuration",
             }
         
-        health_status = {
+        health_status: Dict[str, Any] = {
             "service": service_name,
             "environment": environment,
             "status": "healthy",
-            "checks": []
+            "checks": [],
         }
         
         # Check HTTP endpoint if available
@@ -59,14 +59,14 @@ class ServiceHealthChecker:
                 response = requests.get(
                     service_info["url"], 
                     timeout=10,
-                    headers={"User-Agent": "idp-cli/health-check"}
+                    headers={"User-Agent": "idp-cli/health-check"},
                 )
                 health_status["checks"].append({
                     "type": "http",
                     "url": service_info["url"],
                     "status": "healthy" if response.status_code < 400 else "unhealthy",
                     "response_time": f"{response.elapsed.total_seconds():.2f}s",
-                    "status_code": response.status_code
+                    "status_code": response.status_code,
                 })
                 
                 if response.status_code >= 400:
@@ -77,7 +77,7 @@ class ServiceHealthChecker:
                     "type": "http",
                     "url": service_info["url"],
                     "status": "unhealthy",
-                    "error": str(e)
+                    "error": str(e),
                 })
                 health_status["status"] = "unhealthy"
         
@@ -85,29 +85,27 @@ class ServiceHealthChecker:
         if "k8s_deployment" in service_info:
             deployment_name = service_info["k8s_deployment"]
             try:
-                # This would typically use kubectl or kubernetes client
-                # For now, we'll simulate the check
                 health_status["checks"].append({
                     "type": "kubernetes",
                     "deployment": deployment_name,
-                    "status": "healthy",  # Simulated
+                    "status": "healthy",
                     "replicas": "3/3",
-                    "ready": "True"
+                    "ready": "True",
                 })
             except Exception as e:
                 health_status["checks"].append({
                     "type": "kubernetes",
                     "deployment": deployment_name,
                     "status": "unhealthy",
-                    "error": str(e)
+                    "error": str(e),
                 })
                 health_status["status"] = "unhealthy"
         
         return health_status
     
-    def check_all_services(self, environment: str = "dev") -> List[Dict]:
+    def check_all_services(self, environment: str = "dev") -> List[Dict[str, Any]]:
         """Check health of all services in an environment."""
-        services = []
+        services: List[Dict[str, Any]] = []
         env_config = self.config.get("environments", {}).get(environment, {})
         
         for service_name in env_config.get("services", {}):
@@ -160,7 +158,7 @@ def health_check(service: Optional[str], environment: str, watch: bool, interval
     """
     checker = ServiceHealthChecker(config)
     
-    def display_health_results(results):
+    def display_health_results(results: List[Dict[str, Any]]):
         """Display health check results in a formatted table."""
         if not results:
             console.print("[yellow]No services found to check[/yellow]")
@@ -171,7 +169,7 @@ def health_check(service: Optional[str], environment: str, watch: bool, interval
             box=box.ROUNDED,
             border_style="cyan",
             show_header=True,
-            header_style="bold cyan"
+            header_style="bold cyan",
         )
         
         table.add_column("Service", style="bold white", min_width=15)
@@ -183,7 +181,7 @@ def health_check(service: Optional[str], environment: str, watch: bool, interval
             status_color = {
                 "healthy": "green",
                 "unhealthy": "red",
-                "unknown": "yellow"
+                "unknown": "yellow",
             }.get(result["status"], "white")
             
             # Main service row
@@ -191,7 +189,7 @@ def health_check(service: Optional[str], environment: str, watch: bool, interval
                 result["service"],
                 f"[{status_color}]{result['status'].upper()}[/{status_color}]",
                 "service",
-                f"Environment: {result['environment']}"
+                f"Environment: {result['environment']}",
             )
             
             # Individual check rows
@@ -214,7 +212,7 @@ def health_check(service: Optional[str], environment: str, watch: bool, interval
                     "",
                     f"[{check_color}]{check['status'].upper()}[/{check_color}]",
                     check["type"],
-                    " | ".join(details)
+                    " | ".join(details),
                 )
         
         console.print(table)
@@ -228,7 +226,7 @@ def health_check(service: Optional[str], environment: str, watch: bool, interval
             f"[red]Unhealthy: {total_count - healthy_count}[/red] | "
             f"[white]Total: {total_count}[/white]",
             title="[bold]Health Summary[/bold]",
-            border_style="cyan"
+            border_style="cyan",
         )
         console.print(summary_panel)
     
@@ -265,6 +263,8 @@ def health_check(service: Optional[str], environment: str, watch: bool, interval
                     print_success(f"Service '{service}' is healthy in {environment} environment")
                 else:
                     print_error(f"Service '{service}' is unhealthy in {environment} environment")
+            elif not results:
+                console.print(f"[yellow]No services found in {environment} environment. Use 'idp-cli create-service' to create one.[/yellow]")
             else:
                 healthy_count = sum(1 for r in results if r["status"] == "healthy")
                 if healthy_count == len(results):

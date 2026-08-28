@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "idp-cli"
-version = "1.0.0"
+version = "2.0.0"
 description = "Internal Developer Platform CLI — Complete self-service infrastructure with service management, security scanning, cost optimization, and API documentation"
 readme = "README.md"
 license = {text = "MIT"}

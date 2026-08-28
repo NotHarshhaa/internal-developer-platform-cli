@@ -12,7 +12,7 @@ def test_cli_version():
     assert result.exit_code == 0
     assert "IDP CLI" in result.output
     assert "CLI Version" in result.output
-    assert "0.2.0" in result.output
+    assert "2.0.0" in result.output
 
 
 def test_cli_help():

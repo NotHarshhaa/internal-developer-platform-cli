@@ -69,9 +69,9 @@ def print_version(ctx, param, value):
         padding=(0, 0),
     )
     links_table.add_column("", style="dim")
-    links_table.add_row("  📦 [link=https://pypi.org/project/idp-cli/]PyPI[/link]")
-    links_table.add_row("  📖 [link=https://github.com/notHarshhaa/internal-developer-platform-cli]GitHub[/link]")
-    links_table.add_row("  🐛 [link=https://github.com/notHarshhaa/internal-developer-platform-cli/issues]Issues[/link]")
+    links_table.add_row("  * PyPI:    https://pypi.org/project/idp-cli/")
+    links_table.add_row("  * GitHub:  https://github.com/notHarshhaa/internal-developer-platform-cli")
+    links_table.add_row("  * Issues:  https://github.com/notHarshhaa/internal-developer-platform-cli/issues")
 
     console.print(links_table)
     console.print()

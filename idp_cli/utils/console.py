@@ -7,6 +7,16 @@ from rich.text import Text
 from rich.theme import Theme
 from rich import box
 
+import sys
+
+# Reconfigure stdout/stderr for utf-8 if supported on Windows
+if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 # Custom theme for the IDP CLI
 _theme = Theme({
     "info": "cyan",
@@ -18,7 +28,7 @@ _theme = Theme({
     "muted": "dim white",
 })
 
-console = Console(theme=_theme)
+console = Console(theme=_theme, soft_wrap=True)
 
 # ASCII banner for the CLI
 BANNER = r"""[bold cyan]
