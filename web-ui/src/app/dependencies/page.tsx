@@ -4,48 +4,17 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Network,
-  Layers,
-  AlertTriangle,
-  CheckCircle2,
-  Share2,
   Download,
-  Info,
   Server,
-  Database,
-  Radio,
-  Globe,
-  ArrowRight,
-  ShieldAlert,
-  Search,
-  Zap,
-  Sliders,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { TopologyGraph, type TopologyNode } from "./components/topology-graph";
+import { NodeDrawer } from "./components/node-drawer";
 
-interface Node {
-  id: string;
-  name: string;
-  tier: "gateway" | "api" | "worker" | "data";
-  protocol: string;
-  qps: number;
-  avgLatency: string;
-  errorRate: string;
-  dependencies: string[]; // downstream service ids
-  status: "healthy" | "degraded";
-  x: number;
-  y: number;
-}
-
-const initialNodes: Node[] = [
+const initialNodes: TopologyNode[] = [
   {
     id: "api-gw",
     name: "API Gateway",
@@ -166,23 +135,13 @@ const initialNodes: Node[] = [
 ];
 
 export default function DependenciesPage() {
-  const [nodes, setNodes] = useState<Node[]>(initialNodes);
+  const [nodes, setNodes] = useState<TopologyNode[]>(initialNodes);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>("order-api");
   const [filterTier, setFilterTier] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [zoomLevel, setZoomLevel] = useState(1);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
-
-  // Find upstream dependents (who calls this node)
-  const upstreamCallers = selectedNode
-    ? nodes.filter((n) => n.dependencies.includes(selectedNode.id))
-    : [];
-
-  // Find downstream targets (who this node calls)
-  const downstreamTargets = selectedNode
-    ? nodes.filter((n) => selectedNode.dependencies.includes(n.id))
-    : [];
 
   const handleExportTopology = () => {
     const topology = {
@@ -242,13 +201,13 @@ export default function DependenciesPage() {
             variant="outline"
             size="sm"
             onClick={handleExportTopology}
-            className="gap-1.5 h-8 text-xs"
+            className="gap-1.5 h-8 text-xs cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" />
             Export Blueprint
           </Button>
           <Link href="/create">
-            <Button size="sm" className="gap-1.5 h-8 text-xs shadow-xs">
+            <Button size="sm" className="gap-1.5 h-8 text-xs shadow-xs cursor-pointer">
               <Server className="h-3.5 w-3.5" />
               Register Service
             </Button>
@@ -290,294 +249,23 @@ export default function DependenciesPage() {
 
       {/* Main Interactive Diagram & Inspection Panel */}
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        {/* Visual Map */}
-        <Card className="flex flex-col min-h-[460px] overflow-hidden border-border/80 shadow-xs">
-          <div className="flex items-center justify-between border-b p-3 bg-muted/20">
-            <div className="flex items-center gap-2 flex-wrap">
-              {["all", "gateway", "api", "worker", "data"].map((tier) => (
-                <Button
-                  key={tier}
-                  variant={filterTier === tier ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFilterTier(tier)}
-                  className="capitalize text-xs h-7 px-2.5"
-                >
-                  {tier}
-                </Button>
-              ))}
-            </div>
+        <TopologyGraph
+          nodes={filteredNodes}
+          selectedNodeId={selectedNodeId}
+          onSelectNode={setSelectedNodeId}
+          filterTier={filterTier}
+          setFilterTier={setFilterTier}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          zoomLevel={zoomLevel}
+          setZoomLevel={setZoomLevel}
+        />
 
-            <div className="flex items-center gap-2">
-              <div className="relative w-36 sm:w-48">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  placeholder="Filter node..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-7 text-xs pl-8"
-                />
-              </div>
-
-              <div className="flex items-center border rounded-md bg-background p-0.5">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setZoomLevel((z) => Math.max(0.8, z - 0.1))}
-                  className="h-6 w-6 p-0"
-                >
-                  <ZoomOut className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setZoomLevel(1)}
-                  className="h-6 px-1.5 text-[10px] font-mono"
-                >
-                  {Math.round(zoomLevel * 100)}%
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setZoomLevel((z) => Math.min(1.4, z + 0.1))}
-                  className="h-6 w-6 p-0"
-                >
-                  <ZoomIn className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1 p-4 bg-muted/5 relative overflow-auto">
-            {/* SVG Diagram Rendering */}
-            <div style={{ transform: `scale(${zoomLevel})`, transformOrigin: "top left" }} className="transition-transform duration-150">
-              <svg className="w-full min-w-[700px] h-[400px]" viewBox="0 0 820 420">
-                <defs>
-                  <marker
-                    id="arrow"
-                    viewBox="0 0 10 10"
-                    refX="18"
-                    refY="5"
-                    markerWidth="6"
-                    markerHeight="6"
-                    orient="auto-start-reverse"
-                  >
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" className="text-muted-foreground/60" />
-                  </marker>
-                  <marker
-                    id="arrow-active"
-                    viewBox="0 0 10 10"
-                    refX="18"
-                    refY="5"
-                    markerWidth="6"
-                    markerHeight="6"
-                    orient="auto-start-reverse"
-                  >
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" className="text-primary" />
-                  </marker>
-                </defs>
-
-                {/* Render Lines */}
-                {nodes.map((source) =>
-                  source.dependencies.map((targetId) => {
-                    const target = nodes.find((n) => n.id === targetId);
-                    if (!target) return null;
-                    const isHighlighted =
-                      selectedNodeId === source.id || selectedNodeId === target.id;
-                    return (
-                      <line
-                        key={`${source.id}->${target.id}`}
-                        x1={source.x + 60}
-                        y1={source.y + 20}
-                        x2={target.x + 60}
-                        y2={target.y + 20}
-                        stroke="currentColor"
-                        strokeWidth={isHighlighted ? 2.5 : 1.2}
-                        strokeDasharray={source.tier === "worker" ? "4,4" : undefined}
-                        className={
-                          isHighlighted
-                            ? "text-primary transition-all duration-300"
-                            : "text-muted-foreground/30"
-                        }
-                        markerEnd={isHighlighted ? "url(#arrow-active)" : "url(#arrow)"}
-                      />
-                    );
-                  })
-                )}
-
-                {/* Render Nodes */}
-                {nodes.map((node) => {
-                  const isSelected = selectedNodeId === node.id;
-                  const isUpstream = selectedNode?.dependencies.includes(node.id);
-                  const isDownstream = node.dependencies.includes(selectedNodeId || "");
-
-                  return (
-                    <g
-                      key={node.id}
-                      transform={`translate(${node.x}, ${node.y})`}
-                      onClick={() => setSelectedNodeId(node.id)}
-                      className="cursor-pointer"
-                    >
-                      <rect
-                        width="130"
-                        height="46"
-                        rx="8"
-                        className={`transition-all duration-200 ${
-                          isSelected
-                            ? "fill-primary text-primary-foreground stroke-2 stroke-primary shadow-lg"
-                            : isUpstream || isDownstream
-                            ? "fill-primary/10 stroke-primary stroke-1"
-                            : "fill-card stroke-border hover:stroke-primary/50"
-                        }`}
-                      />
-                      <text
-                        x="10"
-                        y="20"
-                        className={`text-[11px] font-semibold select-none ${
-                          isSelected ? "fill-primary-foreground" : "fill-foreground"
-                        }`}
-                      >
-                        {node.name.length > 15 ? node.name.slice(0, 14) + "…" : node.name}
-                      </text>
-                      <text
-                        x="10"
-                        y="35"
-                        className={`text-[9px] select-none capitalize ${
-                          isSelected ? "fill-primary-foreground/80" : "fill-muted-foreground"
-                        }`}
-                      >
-                        {node.tier} • {node.protocol.split(" ")[0]}
-                      </text>
-                    </g>
-                  );
-                })}
-              </svg>
-            </div>
-          </div>
-
-          <div className="p-2.5 border-t bg-muted/20 flex items-center justify-between text-[11px] text-muted-foreground">
-            <span>Click any node in the topology to inspect its connections and blast radius</span>
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-primary inline-block" /> Selected
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-primary/40 inline-block" /> Connected
-              </span>
-            </div>
-          </div>
-        </Card>
-
-        {/* Node Inspection & Blast Radius Drawer */}
-        {selectedNode ? (
-          <Card className="border-border/80">
-            <CardHeader className="p-4 pb-2">
-              <div className="flex items-center justify-between">
-                <Badge variant="outline" className="text-[10px] uppercase">
-                  {selectedNode.tier}
-                </Badge>
-                <Badge
-                  variant={selectedNode.status === "healthy" ? "default" : "destructive"}
-                  className="text-[9px]"
-                >
-                  {selectedNode.status}
-                </Badge>
-              </div>
-              <CardTitle className="text-sm font-bold mt-2">{selectedNode.name}</CardTitle>
-              <CardDescription className="text-xs font-mono">{selectedNode.id}</CardDescription>
-            </CardHeader>
-
-            <CardContent className="p-4 pt-1 space-y-4">
-              <Separator />
-
-              {/* Service Telemetry */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-muted-foreground block text-[10px]">Traffic (QPS)</span>
-                  <span className="font-semibold">{selectedNode.qps.toLocaleString()} req/s</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block text-[10px]">Avg Latency</span>
-                  <span className="font-semibold">{selectedNode.avgLatency}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block text-[10px]">Error Rate</span>
-                  <span className="font-semibold font-mono text-emerald-500">{selectedNode.errorRate}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block text-[10px]">Protocol</span>
-                  <span className="font-semibold font-mono text-[10px] truncate">{selectedNode.protocol}</span>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Blast Radius Impact Analysis */}
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-1.5">
-                <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                  <ShieldAlert className="h-4 w-4" />
-                  Blast Radius Analysis
-                </div>
-                <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  If <strong>{selectedNode.name}</strong> experiences failure,{" "}
-                  <strong>{upstreamCallers.length} upstream caller(s)</strong> and{" "}
-                  <strong>{downstreamTargets.length} downstream service(s)</strong> will be impacted.
-                </p>
-              </div>
-
-              {/* Downstream Dependencies */}
-              <div>
-                <p className="text-[11px] font-semibold mb-1.5">
-                  Downstream Dependencies ({downstreamTargets.length})
-                </p>
-                {downstreamTargets.length > 0 ? (
-                  <div className="space-y-1">
-                    {downstreamTargets.map((dep) => (
-                      <button
-                        key={dep.id}
-                        onClick={() => setSelectedNodeId(dep.id)}
-                        className="w-full flex items-center justify-between p-1.5 rounded-md border text-left text-xs hover:bg-accent transition-colors cursor-pointer"
-                      >
-                        <span className="font-medium truncate">{dep.name}</span>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[10px] text-muted-foreground italic">No downstream dependencies (Leaf node)</p>
-                )}
-              </div>
-
-              {/* Upstream Callers */}
-              <div>
-                <p className="text-[11px] font-semibold mb-1.5">
-                  Upstream Callers ({upstreamCallers.length})
-                </p>
-                {upstreamCallers.length > 0 ? (
-                  <div className="space-y-1">
-                    {upstreamCallers.map((caller) => (
-                      <button
-                        key={caller.id}
-                        onClick={() => setSelectedNodeId(caller.id)}
-                        className="w-full flex items-center justify-between p-1.5 rounded-md border text-left text-xs hover:bg-accent transition-colors cursor-pointer"
-                      >
-                        <span className="font-medium truncate">{caller.name}</span>
-                        <Badge variant="outline" className="text-[8px] font-mono">
-                          {caller.protocol.split(" ")[0]}
-                        </Badge>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[10px] text-muted-foreground italic">Root Gateway (Ingress entrypoint)</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="flex items-center justify-center p-6 text-center text-muted-foreground text-xs">
-            Select a service to inspect its connections
-          </Card>
-        )}
+        <NodeDrawer
+          selectedNode={selectedNode}
+          nodes={nodes}
+          onSelectNode={setSelectedNodeId}
+        />
       </div>
     </div>
   );

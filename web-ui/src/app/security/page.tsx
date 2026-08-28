@@ -1,42 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   ShieldCheck,
-  ShieldAlert,
-  AlertTriangle,
-  CheckCircle2,
-  XCircle,
-  FileCode,
   Download,
   Play,
   Lock,
-  Terminal,
-  Server,
-  Sparkles,
-  Info,
-  Copy,
-  Check,
-  CheckCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-
-interface SecurityFinding {
-  id: string;
-  rule: string;
-  severity: "critical" | "high" | "medium" | "low";
-  category: "Container" | "Kubernetes" | "Secrets" | "Dependencies";
-  file: string;
-  description: string;
-  remediation: string;
-  patchSnippet: string;
-  status: "passed" | "warning" | "failed";
-}
+import { SecurityKpiCards } from "./components/security-kpis";
+import { FindingCard, type SecurityFinding } from "./components/finding-card";
 
 const initialFindings: SecurityFinding[] = [
   {
@@ -191,7 +167,7 @@ export default function SecurityScannerPage() {
             size="sm"
             onClick={handleRunScan}
             disabled={scanning}
-            className="gap-1.5 h-8 text-xs"
+            className="gap-1.5 h-8 text-xs cursor-pointer"
           >
             <Play className={`h-3.5 w-3.5 ${scanning ? "animate-spin" : ""}`} />
             {scanning ? "Auditing Policies..." : "Run Security Scan"}
@@ -200,7 +176,7 @@ export default function SecurityScannerPage() {
             variant="default"
             size="sm"
             onClick={handleExportSecurityReport}
-            className="gap-1.5 h-8 text-xs shadow-xs"
+            className="gap-1.5 h-8 text-xs shadow-xs cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" />
             Export Audit Report
@@ -209,51 +185,7 @@ export default function SecurityScannerPage() {
       </div>
 
       {/* Scorecards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="border-emerald-500/30 bg-emerald-500/5">
-          <CardContent className="p-3.5">
-            <span className="text-xs text-muted-foreground">Security Scorecard</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl md:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                A+ ({score}%)
-              </span>
-              <span className="text-[10px] text-muted-foreground">High Compliance</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70">
-          <CardContent className="p-3.5">
-            <span className="text-xs text-muted-foreground">Critical Vulnerabilities</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-emerald-500">0 CVEs</span>
-              <span className="text-[10px] text-muted-foreground">Clean scan</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70">
-          <CardContent className="p-3.5">
-            <span className="text-xs text-muted-foreground">Hardcoded Secrets</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-emerald-500">0 Leaks</span>
-              <span className="text-[10px] text-muted-foreground">Entropy scan clean</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={warningCount > 0 ? "border-amber-500/20 bg-amber-500/5" : "border-border/70"}>
-          <CardContent className="p-3.5">
-            <span className="text-xs text-muted-foreground">Policy Warnings</span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                {warningCount} Warnings
-              </span>
-              <span className="text-[10px] text-muted-foreground">Fix patches ready</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <SecurityKpiCards score={score} warningCount={warningCount} />
 
       {/* Findings List */}
       <Card className="border-border/80 shadow-xs">
@@ -276,7 +208,7 @@ export default function SecurityScannerPage() {
                   variant={activeCategory === cat ? "default" : "outline"}
                   size="sm"
                   onClick={() => setActiveCategory(cat)}
-                  className="capitalize text-xs h-7 px-2.5"
+                  className="capitalize text-xs h-7 px-2.5 cursor-pointer"
                 >
                   {cat}
                 </Button>
@@ -287,67 +219,12 @@ export default function SecurityScannerPage() {
 
         <CardContent className="p-4 pt-2 space-y-3">
           {filteredFindings.map((finding) => (
-            <div
+            <FindingCard
               key={finding.id}
-              className={`p-3.5 rounded-lg border text-xs space-y-2.5 transition-colors ${
-                finding.status === "passed"
-                  ? "bg-card border-border/80"
-                  : "bg-amber-500/5 border-amber-500/30"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  {finding.status === "passed" ? (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-                  )}
-                  <span className="font-semibold text-foreground">{finding.rule}</span>
-                  <Badge variant="outline" className="text-[9px] font-mono">
-                    {finding.id}
-                  </Badge>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <Badge variant="secondary" className="text-[9px]">
-                    {finding.category}
-                  </Badge>
-                  <Badge
-                    variant={finding.severity === "critical" ? "destructive" : "outline"}
-                    className="text-[9px] capitalize"
-                  >
-                    {finding.severity}
-                  </Badge>
-                </div>
-              </div>
-
-              <p className="text-[11px] text-muted-foreground leading-relaxed pl-6">
-                {finding.description}
-              </p>
-
-              {/* Remediation Patch Preview */}
-              <div className="pl-6 space-y-1.5">
-                <div className="flex items-center justify-between text-[10px]">
-                  <div className="flex items-center gap-1 font-mono text-muted-foreground">
-                    <FileCode className="h-3 w-3" />
-                    <span>Target: {finding.file}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleCopyPatch(finding.id, finding.patchSnippet)}
-                    className="h-6 text-[10px] gap-1 text-primary hover:bg-primary/10"
-                  >
-                    {copiedPatchId === finding.id ? <CheckCheck className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-                    {copiedPatchId === finding.id ? "Patch Copied" : "Copy Remediation Patch"}
-                  </Button>
-                </div>
-
-                <pre className="rounded bg-neutral-950 p-2 text-[10px] font-mono text-green-400 border border-neutral-800 overflow-x-auto">
-                  {finding.patchSnippet}
-                </pre>
-              </div>
-            </div>
+              finding={finding}
+              copiedPatchId={copiedPatchId}
+              onCopyPatch={handleCopyPatch}
+            />
           ))}
         </CardContent>
       </Card>

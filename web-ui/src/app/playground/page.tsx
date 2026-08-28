@@ -1,40 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   Terminal,
-  Play,
-  Copy,
-  Check,
-  CheckCheck,
-  Sparkles,
-  Layers,
-  Heart,
-  Network,
-  DollarSign,
-  ShieldCheck,
-  Download,
-  RotateCcw,
-  Sliders,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-
-interface CommandPreset {
-  id: string;
-  name: string;
-  command: string;
-  description: string;
-  category: "Create" | "Health" | "Topology" | "Cost" | "Security";
-  simulatedOutput: string[];
-}
+import { PresetCard, type CommandPreset } from "./components/preset-card";
+import { FlagBuilder } from "./components/flag-builder";
+import { TerminalEmulator } from "./components/terminal-emulator";
 
 const presets: CommandPreset[] = [
   {
@@ -194,196 +168,45 @@ export default function PlaygroundPage() {
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
           {presets.map((preset) => (
-            <Card
+            <PresetCard
               key={preset.id}
-              className={`cursor-pointer transition-all hover:border-primary/50 ${
-                selectedPreset.id === preset.id
-                  ? "ring-2 ring-primary border-primary bg-primary/5 shadow-xs"
-                  : "border-border/70"
-              }`}
-              onClick={() => handleSelectPreset(preset)}
-            >
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <Badge variant="secondary" className="text-[9px]">
-                    {preset.category}
-                  </Badge>
-                  {selectedPreset.id === preset.id && (
-                    <Badge variant="default" className="text-[8px] px-1 py-0">
-                      Active
-                    </Badge>
-                  )}
-                </div>
-                <h4 className="text-xs font-bold text-foreground">{preset.name}</h4>
-                <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">
-                  {preset.description}
-                </p>
-              </CardContent>
-            </Card>
+              preset={preset}
+              isActive={selectedPreset.id === preset.id}
+              onSelect={handleSelectPreset}
+            />
           ))}
         </div>
       </div>
 
       {/* Interactive Command Builder & Terminal Output */}
       <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
-        {/* Left: Custom Flag Builder */}
-        <Card className="border-border/80">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-xs font-bold flex items-center gap-2">
-              <Sliders className="h-3.5 w-3.5 text-primary" />
-              Interactive Flag Builder
-            </CardTitle>
-            <CardDescription className="text-[11px]">
-              Tweak flags to generate custom CLI commands
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 pt-1 space-y-3">
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Service Name</Label>
-              <Input
-                value={builderService}
-                onChange={(e) => setBuilderService(e.target.value)}
-                className="h-7.5 text-xs font-mono"
-              />
-            </div>
+        <FlagBuilder
+          builderService={builderService}
+          setBuilderService={setBuilderService}
+          builderTemplate={builderTemplate}
+          setBuilderTemplate={setBuilderTemplate}
+          builderCi={builderCi}
+          setBuilderCi={setBuilderCi}
+          builderDeploy={builderDeploy}
+          setBuilderDeploy={setBuilderDeploy}
+          builderDocker={builderDocker}
+          setBuilderDocker={setBuilderDocker}
+          builderK8s={builderK8s}
+          setBuilderK8s={setBuilderK8s}
+          builderMonitoring={builderMonitoring}
+          setBuilderMonitoring={setBuilderMonitoring}
+          customBuiltCommand={customBuiltCommand}
+          onCopyCommand={handleCopyCommand}
+        />
 
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Template</Label>
-              <select
-                value={builderTemplate}
-                onChange={(e) => setBuilderTemplate(e.target.value)}
-                className="w-full h-7.5 rounded-md border border-input bg-background px-2 text-xs font-mono"
-              >
-                <option value="python-api">python-api (FastAPI)</option>
-                <option value="node-api">node-api (Express)</option>
-                <option value="go-api">go-api (Gin)</option>
-                <option value="rust-api">rust-api (Axum)</option>
-                <option value="nextjs-fullstack">nextjs-fullstack</option>
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">CI/CD Provider</Label>
-              <select
-                value={builderCi}
-                onChange={(e) => setBuilderCi(e.target.value)}
-                className="w-full h-7.5 rounded-md border border-input bg-background px-2 text-xs"
-              >
-                <option value="github-actions">github-actions</option>
-                <option value="gitlab-ci">gitlab-ci</option>
-                <option value="jenkins">jenkins</option>
-              </select>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span>--docker</span>
-                <Switch checked={builderDocker} onCheckedChange={setBuilderDocker} className="scale-75" />
-              </div>
-              <div className="flex items-center justify-between">
-                <span>--k8s</span>
-                <Switch checked={builderK8s} onCheckedChange={setBuilderK8s} className="scale-75" />
-              </div>
-              <div className="flex items-center justify-between">
-                <span>--monitoring</span>
-                <Switch checked={builderMonitoring} onCheckedChange={setBuilderMonitoring} className="scale-75" />
-              </div>
-            </div>
-
-            <Button
-              size="sm"
-              onClick={() => handleCopyCommand(customBuiltCommand)}
-              className="w-full text-xs h-7.5 gap-1.5 mt-2"
-            >
-              <Copy className="h-3 w-3" />
-              Copy Built Command
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Right: Active Command & Terminal Simulator */}
-        <div className="space-y-3">
-          <Card className="border-border/80">
-            <CardHeader className="p-3.5 pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-semibold flex items-center gap-2">
-                  <Terminal className="h-3.5 w-3.5 text-primary" />
-                  Active CLI Command
-                </CardTitle>
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCopyCommand(selectedPreset.command)}
-                    className="h-7 text-xs gap-1.5"
-                  >
-                    {copied ? <CheckCheck className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-                    {copied ? "Copied" : "Copy"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleRunCommand(selectedPreset.simulatedOutput)}
-                    disabled={running}
-                    className="h-7 text-xs gap-1.5 shadow-xs"
-                  >
-                    <Play className="h-3 w-3" />
-                    {running ? "Executing..." : "Simulate Run"}
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-3.5 pt-1">
-              <div className="rounded-lg bg-muted/40 p-2.5 font-mono text-xs text-foreground border overflow-x-auto select-all">
-                <span className="text-primary font-bold">$ </span>
-                {selectedPreset.command}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Live Terminal Output Emulator */}
-          <Card className="overflow-hidden border-neutral-800 shadow-xl bg-neutral-950 text-neutral-100">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-800 bg-neutral-900/80">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-red-500/80" />
-                <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-                <div className="h-3 w-3 rounded-full bg-green-500/80" />
-                <span className="ml-2 text-[11px] font-mono text-neutral-400">
-                  idp-terminal — bash
-                </span>
-              </div>
-              <Badge variant="outline" className="text-[9px] font-mono text-neutral-400 border-neutral-700">
-                Rich TUI
-              </Badge>
-            </div>
-
-            <div className="p-4 font-mono text-xs min-h-[220px] max-h-[300px] overflow-y-auto space-y-1.5 leading-relaxed">
-              {terminalLines.map((line, idx) => (
-                <div
-                  key={idx}
-                  className="text-neutral-200"
-                  dangerouslySetInnerHTML={{
-                    __html: line
-                      .replace(/\x1b\[32m/g, '<span class="text-emerald-400 font-semibold">')
-                      .replace(/\x1b\[36m/g, '<span class="text-cyan-400">')
-                      .replace(/\x1b\[33m/g, '<span class="text-amber-400">')
-                      .replace(/\x1b\[34m/g, '<span class="text-sky-400 font-medium">')
-                      .replace(/\x1b\[35m/g, '<span class="text-purple-400 font-medium">')
-                      .replace(/\x1b\[1;32m/g, '<span class="text-emerald-300 font-bold">')
-                      .replace(/\x1b\[0m/g, "</span>"),
-                  }}
-                />
-              ))}
-              {running && (
-                <div className="flex items-center gap-2 text-neutral-400 animate-pulse">
-                  <span className="inline-block h-3.5 w-2 bg-emerald-400" />
-                  <span>Executing idp pipeline...</span>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
+        <TerminalEmulator
+          selectedPreset={selectedPreset}
+          copied={copied}
+          running={running}
+          terminalLines={terminalLines}
+          onCopyCommand={handleCopyCommand}
+          onRunCommand={handleRunCommand}
+        />
       </div>
     </div>
   );

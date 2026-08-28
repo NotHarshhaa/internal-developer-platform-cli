@@ -1,57 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import {
   Heart,
-  Activity,
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
   RefreshCw,
-  Server,
-  Database,
-  Cpu,
-  HardDrive,
   Download,
-  Play,
-  Clock,
-  ShieldCheck,
-  Zap,
-  Globe,
-  Radio,
-  Sliders,
-  ChevronDown,
-  ChevronUp,
-  Terminal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-
-interface ServiceHealth {
-  id: string;
-  name: string;
-  type: "api" | "database" | "queue" | "gateway";
-  status: "healthy" | "degraded" | "unhealthy";
-  uptime: string;
-  latencyMs: number;
-  cpuPercent: number;
-  memoryMb: number;
-  endpoint: string;
-  lastChecked: string;
-  details?: {
-    version: string;
-    connections: number;
-    threadPool: string;
-    p95Latency: string;
-  };
-}
+import { HealthKpiCards } from "./components/health-kpi-cards";
+import { ServiceCard, type ServiceHealth } from "./components/service-card";
+import { CustomProbe } from "./components/custom-probe";
+import { IncidentLog, type Incident } from "./components/incident-log";
 
 const initialServices: ServiceHealth[] = [
   {
@@ -134,15 +96,6 @@ const initialServices: ServiceHealth[] = [
   },
 ];
 
-interface Incident {
-  id: string;
-  service: string;
-  severity: "critical" | "warning" | "info";
-  message: string;
-  timestamp: string;
-  resolved: boolean;
-}
-
 const initialIncidents: Incident[] = [
   {
     id: "inc-1",
@@ -178,7 +131,6 @@ export default function HealthPage() {
     loading?: boolean;
   } | null>(null);
 
-  // Auto-refresh ticker simulation
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
@@ -276,7 +228,6 @@ export default function HealthPage() {
   });
 
   const healthyCount = services.filter((s) => s.status === "healthy").length;
-  const degradedCount = services.filter((s) => s.status === "degraded").length;
   const avgLatency = (
     services.reduce((sum, s) => sum + s.latencyMs, 0) / services.length
   ).toFixed(1);
@@ -313,7 +264,7 @@ export default function HealthPage() {
             size="sm"
             onClick={handleRefreshAll}
             disabled={probing}
-            className="gap-1.5 h-8 text-xs"
+            className="gap-1.5 h-8 text-xs cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${probing ? "animate-spin" : ""}`} />
             {probing ? "Probing..." : "Trigger Probes"}
@@ -323,7 +274,7 @@ export default function HealthPage() {
             variant="default"
             size="sm"
             onClick={handleExportReport}
-            className="gap-1.5 h-8 text-xs shadow-xs"
+            className="gap-1.5 h-8 text-xs shadow-xs cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" />
             Export Report
@@ -332,63 +283,12 @@ export default function HealthPage() {
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="border-emerald-500/20 bg-emerald-500/5">
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Operational Status</span>
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-xl md:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {healthyCount}/{services.length}
-              </span>
-              <span className="text-[10px] text-muted-foreground">Services Healthy</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Average Latency</span>
-              <Zap className="h-4 w-4 text-amber-500" />
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-xl md:text-2xl font-bold">{avgLatency} ms</span>
-              <span className="text-[10px] text-emerald-500">p95: 48ms</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">System Uptime</span>
-              <Activity className="h-4 w-4 text-sky-500" />
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-xl md:text-2xl font-bold">99.96%</span>
-              <span className="text-[10px] text-muted-foreground">Last 30 days</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={degradedCount > 0 ? "border-amber-500/30 bg-amber-500/5" : ""}>
-          <CardContent className="p-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Active Incidents</span>
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-xl md:text-2xl font-bold text-amber-600 dark:text-amber-400">
-                {incidents.filter((i) => !i.resolved).length}
-              </span>
-              <span className="text-[10px] text-muted-foreground">Open alerts</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <HealthKpiCards
+        healthyCount={healthyCount}
+        totalServices={services.length}
+        avgLatency={avgLatency}
+        openIncidentsCount={incidents.filter((i) => !i.resolved).length}
+      />
 
       {/* Services List & Filter */}
       <div className="space-y-3">
@@ -400,7 +300,7 @@ export default function HealthPage() {
                 variant={filterType === type ? "default" : "outline"}
                 size="sm"
                 onClick={() => setFilterType(type)}
-                className="capitalize text-xs h-7 px-2.5"
+                className="capitalize text-xs h-7 px-2.5 cursor-pointer"
               >
                 {type === "all" ? "All Components" : type}
               </Button>
@@ -412,212 +312,31 @@ export default function HealthPage() {
         </div>
 
         <div className="grid gap-3.5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {filteredServices.map((service) => {
-            const isExpanded = expandedService === service.id;
-            return (
-              <Card key={service.id} className="hover:border-primary/40 transition-colors border-border/80 flex flex-col justify-between">
-                <CardHeader className="p-3.5 pb-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      {service.type === "database" ? (
-                        <Database className="h-4 w-4 text-sky-500 shrink-0" />
-                      ) : service.type === "queue" ? (
-                        <Radio className="h-4 w-4 text-purple-500 shrink-0" />
-                      ) : service.type === "gateway" ? (
-                        <Globe className="h-4 w-4 text-indigo-500 shrink-0" />
-                      ) : (
-                        <Server className="h-4 w-4 text-emerald-500 shrink-0" />
-                      )}
-                      <CardTitle className="text-xs font-semibold">{service.name}</CardTitle>
-                    </div>
-                    <Badge
-                      variant={service.status === "healthy" ? "default" : "destructive"}
-                      className="text-[9px] px-1.5 py-0 capitalize"
-                    >
-                      {service.status}
-                    </Badge>
-                  </div>
-                  <CardDescription className="font-mono text-[10px] text-muted-foreground mt-1">
-                    {service.endpoint}
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="p-3.5 pt-0 space-y-2.5">
-                  <Separator />
-                  <div className="grid grid-cols-3 gap-2 text-[10px]">
-                    <div>
-                      <span className="text-muted-foreground block">Latency</span>
-                      <span className="font-semibold text-foreground">{service.latencyMs} ms</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block">CPU Usage</span>
-                      <span className="font-semibold text-foreground">{service.cpuPercent}%</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block">RAM Usage</span>
-                      <span className="font-semibold text-foreground">{service.memoryMb} MB</span>
-                    </div>
-                  </div>
-
-                  {/* Expandable Details */}
-                  {isExpanded && service.details && (
-                    <div className="rounded-md bg-muted/40 p-2 text-[10px] space-y-1 font-mono border animate-in fade-in-50">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Runtime:</span>
-                        <span>{service.details.version}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Active Conn:</span>
-                        <span>{service.details.connections}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Thread Model:</span>
-                        <span>{service.details.threadPool}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">p95 Latency:</span>
-                        <span>{service.details.p95Latency}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      Uptime {service.uptime}
-                    </span>
-                    <button
-                      onClick={() => setExpandedService(isExpanded ? null : service.id)}
-                      className="text-primary hover:underline font-medium cursor-pointer"
-                    >
-                      {isExpanded ? "Less ▲" : "Telemetry ▼"}
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {filteredServices.map((service) => (
+            <ServiceCard
+              key={service.id}
+              service={service}
+              isExpanded={expandedService === service.id}
+              onToggleExpand={() =>
+                setExpandedService(expandedService === service.id ? null : service.id)
+              }
+            />
+          ))}
         </div>
       </div>
 
       {/* Custom Live Probe Tool */}
-      <Card className="border-border/80">
-        <CardHeader className="p-4 pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Globe className="h-4 w-4 text-primary" />
-            Custom Endpoint Probe Simulator
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Send an instant test HTTP probe to any internal or external service endpoint
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 pt-1 space-y-3">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <select
-              value={customMethod}
-              onChange={(e) => setCustomMethod(e.target.value)}
-              className="h-8 rounded-md border border-input bg-background px-2.5 text-xs font-bold font-mono"
-            >
-              <option value="GET">GET</option>
-              <option value="HEAD">HEAD</option>
-              <option value="POST">POST</option>
-            </select>
-            <Input
-              value={customUrl}
-              onChange={(e) => setCustomUrl(e.target.value)}
-              placeholder="https://your-service.internal/healthz"
-              className="h-8 text-xs font-mono flex-1"
-            />
-            <Button
-              size="sm"
-              onClick={handleRunCustomProbe}
-              disabled={customProbeResult?.loading}
-              className="gap-1.5 h-8 text-xs shrink-0"
-            >
-              <Play className="h-3.5 w-3.5" />
-              {customProbeResult?.loading ? "Probing..." : "Send Probe"}
-            </Button>
-          </div>
-
-          {customProbeResult && (
-            <div className="rounded-lg border bg-neutral-950 p-3 text-xs font-mono space-y-1.5 text-neutral-200">
-              <div className="flex items-center justify-between text-[10px] text-neutral-400 border-b border-neutral-800 pb-1">
-                <span>Probe Response Diagnostics</span>
-                <span>Latency: {customProbeResult.latency} ms</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-neutral-400">Status:</span>
-                <Badge
-                  variant={
-                    customProbeResult.status && customProbeResult.status < 400
-                      ? "default"
-                      : "destructive"
-                  }
-                  className="text-[10px]"
-                >
-                  {customProbeResult.status ? `HTTP ${customProbeResult.status}` : "Network Error"}
-                </Badge>
-              </div>
-              {customProbeResult.body && (
-                <div className="text-[11px] text-green-400 bg-neutral-900/80 p-2 rounded max-h-24 overflow-y-auto">
-                  {customProbeResult.body}
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <CustomProbe
+        customMethod={customMethod}
+        setCustomMethod={setCustomMethod}
+        customUrl={customUrl}
+        setCustomUrl={setCustomUrl}
+        onRunProbe={handleRunCustomProbe}
+        result={customProbeResult}
+      />
 
       {/* Incident Management */}
-      <Card>
-        <CardHeader className="p-4 pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            Alerts & Incident Log
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Review and acknowledge active platform alerts
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 pt-2 space-y-2">
-          {incidents.map((incident) => (
-            <div
-              key={incident.id}
-              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border text-xs transition-colors ${
-                incident.resolved ? "bg-muted/20 opacity-60" : "bg-card"
-              }`}
-            >
-              <div className="flex items-start gap-2.5">
-                <div className="mt-0.5">
-                  {incident.severity === "critical" ? (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  ) : incident.severity === "warning" ? (
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  ) : (
-                    <CheckCircle2 className="h-4 w-4 text-sky-500" />
-                  )}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{incident.service}</span>
-                    <span className="text-[10px] text-muted-foreground">{incident.timestamp}</span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">{incident.message}</p>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleToggleIncident(incident.id)}
-                className="h-7 text-[10px] shrink-0 self-start sm:self-center"
-              >
-                {incident.resolved ? "Reopen Alert" : "Acknowledge & Resolve"}
-              </Button>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      <IncidentLog incidents={incidents} onToggleIncident={handleToggleIncident} />
     </div>
   );
 }

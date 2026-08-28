@@ -1,42 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   CheckCircle2,
-  Server,
-  Container,
-  Cloud,
-  Cpu,
-  HardDrive,
-  RefreshCw,
   Download,
-  AlertTriangle,
-  Play,
-  Terminal,
-  ShieldCheck,
-  Zap,
-  Globe,
-  Radio,
-  Layers,
-  Activity,
-  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-
-interface ClusterNode {
-  name: string;
-  role: "control-plane" | "worker";
-  status: "Ready" | "NotReady";
-  cpuPercent: number;
-  memoryPercent: number;
-  version: string;
-  podsCount: number;
-}
+import { NodeTable, type ClusterNode } from "./components/node-table";
+import { CloudRegionsCard, type CloudRegion } from "./components/cloud-regions";
+import { DiagnosticTerminal } from "./components/diagnostic-terminal";
 
 const envNodes: Record<string, ClusterNode[]> = {
   production: [
@@ -54,7 +29,7 @@ const envNodes: Record<string, ClusterNode[]> = {
   ],
 };
 
-const cloudRegions = [
+const cloudRegions: CloudRegion[] = [
   { provider: "AWS (us-east-1)", region: "N. Virginia", latency: "14ms", status: "Operational", healthy: true },
   { provider: "AWS (eu-central-1)", region: "Frankfurt", latency: "92ms", status: "Operational", healthy: true },
   { provider: "GCP (us-central1)", region: "Iowa", latency: "28ms", status: "Operational", healthy: true },
@@ -148,7 +123,7 @@ export default function EnvironmentPage() {
                   setSelectedEnv(env);
                   setDiagLog(null);
                 }}
-                className="capitalize h-7 text-xs px-3"
+                className="capitalize h-7 text-xs px-3 cursor-pointer"
               >
                 {env}
               </Button>
@@ -158,7 +133,7 @@ export default function EnvironmentPage() {
             variant="outline"
             size="sm"
             onClick={handleExportStatus}
-            className="gap-1.5 h-8 text-xs"
+            className="gap-1.5 h-8 text-xs cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" />
             Export
@@ -209,157 +184,18 @@ export default function EnvironmentPage() {
         </Card>
       </div>
 
-      {/* Kubernetes Node Table with Visual Resource Bars */}
-      <Card className="border-border/80 shadow-xs">
-        <CardHeader className="p-4 pb-2">
-          <CardTitle className="text-sm flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Server className="h-4 w-4 text-primary" />
-              Node Infrastructure ({selectedEnv})
-            </span>
-            <Badge variant="outline" className="text-[9px] font-mono">
-              {currentNodes.length} Nodes Online
-            </Badge>
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Hardware allocations, kubelet versions, and active pod densities per host
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 pt-2">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead>
-                <tr className="border-b text-muted-foreground text-[10px] uppercase">
-                  <th className="py-2 font-medium">Node Name</th>
-                  <th className="py-2 font-medium">Role</th>
-                  <th className="py-2 font-medium">Status</th>
-                  <th className="py-2 font-medium">CPU Utilization</th>
-                  <th className="py-2 font-medium">Memory Allocation</th>
-                  <th className="py-2 font-medium">Pods</th>
-                  <th className="py-2 font-medium">K8s Version</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {currentNodes.map((node) => (
-                  <tr key={node.name} className="hover:bg-muted/30 transition-colors">
-                    <td className="py-2.5 font-mono font-medium text-foreground">{node.name}</td>
-                    <td className="py-2.5 capitalize">{node.role}</td>
-                    <td className="py-2.5">
-                      <Badge variant="default" className="text-[9px] px-1.5 py-0 bg-emerald-500 text-white">
-                        {node.status}
-                      </Badge>
-                    </td>
-                    <td className="py-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-20 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="h-full bg-sky-500 rounded-full"
-                            style={{ width: `${node.cpuPercent}%` }}
-                          />
-                        </div>
-                        <span className="font-mono text-[10px]">{node.cpuPercent}%</span>
-                      </div>
-                    </td>
-                    <td className="py-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-20 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="h-full bg-indigo-500 rounded-full"
-                            style={{ width: `${node.memoryPercent}%` }}
-                          />
-                        </div>
-                        <span className="font-mono text-[10px]">{node.memoryPercent}%</span>
-                      </div>
-                    </td>
-                    <td className="py-2.5 font-semibold">{node.podsCount} pods</td>
-                    <td className="py-2.5 font-mono text-muted-foreground">{node.version}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Kubernetes Node Table */}
+      <NodeTable nodes={currentNodes} environment={selectedEnv} />
 
-      {/* Cloud Regions & Latency */}
+      {/* Cloud Regions & Latency + Diagnostic Terminal */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="border-border/80">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Cloud className="h-4 w-4 text-sky-500" />
-              Cloud Provider Regional Latency
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Connectivity and roundtrip ping to primary cloud regions
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 pt-2 space-y-2">
-            {cloudRegions.map((region) => (
-              <div
-                key={region.provider}
-                className="flex items-center justify-between p-2.5 rounded-lg border text-xs bg-muted/10"
-              >
-                <div>
-                  <p className="font-semibold text-foreground">{region.provider}</p>
-                  <p className="text-[10px] text-muted-foreground">{region.region}</p>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <span className="font-mono font-medium">{region.latency}</span>
-                  <Badge variant="outline" className="text-[9px] text-emerald-500 border-emerald-500/20">
-                    {region.status}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Diagnostic Command Runner */}
-        <Card className="border-border/80">
-          <CardHeader className="p-4 pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Terminal className="h-4 w-4 text-primary" />
-                Cluster Diagnostic Runner
-              </CardTitle>
-              <Button
-                size="sm"
-                onClick={handleRunDiagnostics}
-                disabled={runningDiag}
-                className="h-7 text-xs gap-1.5 shadow-xs"
-              >
-                <Play className="h-3 w-3" />
-                {runningDiag ? "Running Check..." : "Run Diagnostics"}
-              </Button>
-            </div>
-            <CardDescription className="text-xs">
-              Execute live health and configuration audit across the {selectedEnv} cluster
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 pt-2">
-            <div className="rounded-lg bg-neutral-950 p-3 font-mono text-[10px] min-h-[160px] max-h-[190px] overflow-y-auto space-y-1 text-neutral-200">
-              {diagLog && diagLog.length > 0 ? (
-                diagLog.map((line, idx) => (
-                  <div
-                    key={idx}
-                    className="leading-relaxed"
-                    dangerouslySetInnerHTML={{
-                      __html: line
-                        .replace(/\x1b\[32m/g, '<span class="text-emerald-400 font-semibold">')
-                        .replace(/\x1b\[36m/g, '<span class="text-cyan-400">')
-                        .replace(/\x1b\[1;32m/g, '<span class="text-emerald-300 font-bold">')
-                        .replace(/\x1b\[0m/g, "</span>"),
-                    }}
-                  />
-                ))
-              ) : (
-                <div className="text-neutral-500 italic py-6 text-center">
-                  Click &quot;Run Diagnostics&quot; to inspect network policies, DNS, ingress, and cluster nodes.
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <CloudRegionsCard regions={cloudRegions} />
+        <DiagnosticTerminal
+          environment={selectedEnv}
+          running={runningDiag}
+          onRunDiagnostics={handleRunDiagnostics}
+          logs={diagLog}
+        />
       </div>
     </div>
   );
