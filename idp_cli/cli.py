@@ -18,6 +18,11 @@ from idp_cli.commands.enhanced_health import enhanced_health
 from idp_cli.commands.security_scanning import security_group
 from idp_cli.commands.cost_management import cost_group
 from idp_cli.commands.api_documentation import api_group
+from idp_cli.commands.doctor import doctor_command
+from idp_cli.commands.config_manager import config_group
+from idp_cli.commands.scaffold_component import generate_group
+from idp_cli.commands.telemetry_metrics import telemetry_group
+from idp_cli.commands.plugin_manager import plugin_group
 from idp_cli.utils.console import console
 
 
@@ -96,6 +101,32 @@ def cli():
     monitoring, and documentation — all in seconds.
 
     \b
+    Environment Doctor & Diagnostics:
+      idp-cli doctor
+
+    \b
+    Configuration & Contexts:
+      idp-cli config list
+      idp-cli config context staging
+      idp-cli config set default_template python-api
+
+    \b
+    Component Scaffolding (Existing Repos):
+      idp-cli generate dockerfile --lang python
+      idp-cli generate k8s --name my-app --port 8080
+      idp-cli generate ci --provider github-actions
+
+    \b
+    Telemetry & Tracing:
+      idp-cli telemetry top --environment production
+      idp-cli telemetry trace tr-8f4b29c1e03a
+
+    \b
+    Plugin & Extension Marketplace:
+      idp-cli plugin list
+      idp-cli plugin install idp-plugin-terraform
+
+    \b
     Service Management:
       idp-cli service list --environment prod
       idp-cli service info payment-service
@@ -114,28 +145,23 @@ def cli():
       idp-cli health --environment prod
       idp-cli health --service payment-service --detailed
       idp-cli health --watch --interval 15
-      idp-cli health --trends 24
 
     \b
     Security Scanning:
       idp-cli security scan payment-service:latest
       idp-cli security scan ./src --type code --scanner snyk
-      idp-cli security history --image payment-service:latest
-      idp-cli security policy --set critical:0 --set high:1
 
     \b
     Cost Management:
       idp-cli cost report --environment prod
       idp-cli cost usage payment-service --environment staging
       idp-cli cost scale user-service --replicas 3
-      idp-cli cost optimize --environment prod
 
     \b
     API Documentation:
       idp-cli api discover payment-service
       idp-cli api docs user-service --format markdown
       idp-cli api test payment-service /health
-      idp-cli api list --environment prod
 
     \b
     Service Creation:
@@ -151,7 +177,12 @@ def cli():
     pass
 
 
-# Register commands
+# Register all CLI commands
+cli.add_command(doctor_command)
+cli.add_command(config_group)
+cli.add_command(generate_group)
+cli.add_command(telemetry_group)
+cli.add_command(plugin_group)
 cli.add_command(create_service)
 cli.add_command(list_templates)
 cli.add_command(health_check)
